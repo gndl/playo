@@ -2,6 +2,7 @@ _build
 *.native
 *.byte
 *.docdir
+*.ml~
 
 setup.data
 setup.log
