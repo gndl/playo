@@ -1,0 +1,8 @@
+(* OASIS_START *)
+(* DO NOT EDIT (digest: 537eb2c2d9b222b293115f62b48bc632) *)
+
+Authors of playo:
+
+* gndl
+
+(* OASIS_STOP *)

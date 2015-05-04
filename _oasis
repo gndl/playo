@@ -1,0 +1,29 @@
+OASISFormat: 0.4
+OCamlVersion: >= 4.01
+Name:        playo
+Version:     0.1
+Synopsis:    A simple audio player in OCaml
+Authors:     gndl
+LicenseFile: LICENSE
+License:     GPL-3
+Plugins:     META (0.4), StdFiles (0.4), DevFiles (0.4)
+PreConfCommand: opam install ao taglib lablgtk config-file
+PreBuildCommand: cd src && lablgladecc2 -embed -hide-default playoGui.glade > playoGui.ml
+
+Executable playo
+  Path:       src
+  BuildTools: ocamlbuild
+  MainIs:     playo.ml
+  CompiledObject: best
+  BuildDepends: unix, threads, str, sndfile, ao, taglib, lablgtk2, lablgtk2.glade, config-file
+#  ByteOpt: -thread -g
+  NativeOpt: -ffast-math -unsafe -inline 10 -noassert
+#  CCLib: -lsndfile -lm
+  CCOpt: -O3
+  DataFiles: *.glade
+
+SourceRepository master
+  Type: git
+  Location: https://github.com/gndl/playo.git
+  Branch: master
+  Browser: https://github.com/gndl/playo
