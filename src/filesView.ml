@@ -178,8 +178,8 @@ class c (filesModel:FilesModel.c) (treeView:GTree.view) (ctrl:Controler.c) tople
 		filesModel#filter mFilterRegexp;
 		filteredFilesModel#refilter()
 
-	method changeFiles() = trace("on_filesView_cursor_changed");
-
+	method changeFiles() =
+		
 		if treeView#hover_selection && mButtonPressed then (
 			treeView#set_hover_selection false;
 			treeView#set_hover_expand false;
@@ -216,11 +216,10 @@ class c (filesModel:FilesModel.c) (treeView:GTree.view) (ctrl:Controler.c) tople
 		mButtonPressed <- true;
 		let x = int_of_float (GdkEvent.Button.x ev) in
 		let y = int_of_float (GdkEvent.Button.y ev) in
-		trace("on_filesView_button_press_event : x="^soi x^" y="^soi y);
 
 		match treeView#get_path_at_pos ~x ~y with
 		| None -> false
-		| Some (path, col, colX, colY) -> (trace("col "^col#title^" id = "^soi col#get_sort_column_id);
+		| Some (path, col, colX, colY) -> (
 
 			if mTimeCol#as_column = col#as_column then (
 				match filesModel#custom_get_iter path with
@@ -301,7 +300,7 @@ class c (filesModel:FilesModel.c) (treeView:GTree.view) (ctrl:Controler.c) tople
 		false
 
 
-	method rowClicked() = trace"on_filesView_button_release_event";
+	method rowClicked() =
 		if treeView#hover_selection then (
 		) else (
 			L.iter (fun p -> match filesModel#custom_get_iter p with
@@ -310,7 +309,7 @@ class c (filesModel:FilesModel.c) (treeView:GTree.view) (ctrl:Controler.c) tople
 		);
 
 
-	method activeHoverMode path col = trace"on_filesView_row_activated";
+	method activeHoverMode path col =
 		ctrl#play;
 		treeView#set_hover_selection true;
 		treeView#set_hover_expand true;

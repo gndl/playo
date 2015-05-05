@@ -50,13 +50,12 @@ class c = object (self)
 		let indices  = GTree.Path.get_indices path in
 
 		let rec searchVisibleRow ri vi rws =
-(*			trace("searchVisibleRow ri:" ^ soi ri ^ " vi:"^ soi vi);*)
 
 			if ri >= A.length rws then rws.(ri - 1)
 			else (
   			let rw = rws.(ri)
   			in
-(*  			trace("searchVisibleRow on " ^ rw.name);*)
+
   			if rw.visible then (
     			if vi = 0 then rw
     			else
@@ -89,7 +88,7 @@ class c = object (self)
 		go 0 mRootDirs
 
 
-	method custom_get_path (row:row) : Gtk.tree_path =(* trace("custom_get_path");*)
+	method custom_get_path (row:row) : Gtk.tree_path =
 		let rec mkl rw l = match rw.parent with
 				| None -> rw.idx::l
 				| Some pd -> mkl pd.dnode (rw.idx::l)
@@ -116,7 +115,7 @@ class c = object (self)
 		)
 
 
-  method custom_iter_next (row:row) : row option =(* trace("custom_iter_next");*)
+  method custom_iter_next (row:row) : row option =
 		let nidx = row.idx + 1 in
 		match row.parent with
 			| None -> if nidx < A.length mRootDirs then Some mRootDirs.(nidx)
@@ -125,20 +124,20 @@ class c = object (self)
 									 else None
 
 
-  method custom_iter_children (rowopt:row option) : row option =(* trace("custom_iter_children");*)
+  method custom_iter_children (rowopt:row option) : row option =
     match rowopt with
     (*| None | Some {kind = Dir { children = [||] }} | Some {kind = File} -> None*)
     | Some {kind = Dir { children = nodes }} -> Some nodes.(0)
 		| _ -> None
 
 
-  method custom_iter_has_child (row:row) : bool =(* trace("custom_iter_has_child");*)
+  method custom_iter_has_child (row:row) : bool =
     match row.kind with 
     | Dir { children = nodes } -> A.length nodes > 0
     | _ -> false
 
 
-  method custom_iter_n_children (rowopt:row option) : int =(* trace("custom_iter_n_children");*)
+  method custom_iter_n_children (rowopt:row option) : int =
     match rowopt with
     | None -> A.length mRootDirs
 (*    | Some {kind = File f} | Some {kind = Null} -> 0*)
@@ -146,7 +145,7 @@ class c = object (self)
 		| _ -> 0
 
 
-  method custom_iter_nth_child (rowopt:row option) (n:int) : row option =(* trace("custom_iter_nth_child");*)
+  method custom_iter_nth_child (rowopt:row option) (n:int) : row option =
     match rowopt with
     | None when A.length mRootDirs > 0 -> Some mRootDirs.(0)
 		| Some {kind = Dir { children = ns }} when n < A.length ns -> Some ns.(n)
