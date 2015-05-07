@@ -10,6 +10,7 @@ Compilation
 -----------
 
 Dependencies: ocaml >= 4.00.1, ocamlfind, opam, unix, threads, str, sndfile, ao, taglib, lablgtk2, config-file
+
 Note that config-file, lablgtk2 and the ocaml bindings of ao and taglib will be automatically downloaded at the configure time.
 
     $ make all

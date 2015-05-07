@@ -21,6 +21,9 @@ let _ =
 	let fl = A.fold_left(fun fl f -> if Sys.file_exists f then f::fl else fl)
 			[] (A.sub Sys.argv 1 (A.length Sys.argv - 1))
 	in
+	
+	Player.initialize();
+
 	let ctrl = Controler.make ~filenameList:fl () in
 
 	ignore(GtkMain.Main.init());
@@ -39,6 +42,8 @@ let _ =
 	GtkThread.main ();
 
 	ctrl#release();
+
+	Player.terminate();
 
 	with e -> (
 		traceMagenta(Printexc.to_string e);

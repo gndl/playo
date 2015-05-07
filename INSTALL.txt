@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 666c9b1f80d71bfc7f60ab546578d2f3) *)
+(* DO NOT EDIT (digest: f987e602bd036e5bdc304fd700c506b4) *)
 
 This is the INSTALL file for the playo distribution.
 
@@ -14,7 +14,7 @@ In order to compile this package, you will need:
 * ocaml (>= 4.01)
 * findlib
 * sndfile
-* ao
+* portaudio
 * taglib
 * lablgtk2
 * config-file

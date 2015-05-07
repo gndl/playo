@@ -90,14 +90,19 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method checkVoice file =
+(*
+		self#checkPropertys file
+*)
 		if self#checkPropertys file then (
-			try AudioFile.checkVoice file
+			try
+				let _ = AudioFile.stream file in true
 			with Sndfile.Error(e, msg) -> (
 				Ev.notify(Ev.Error msg);
 				false
 			)
 		) else false
-
+(*
+*)
 
 	method addFiles ?(save = true) filenameList =
 		let ll = L.map(fun fn -> trace("add "^fn);

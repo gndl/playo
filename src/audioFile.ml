@@ -22,17 +22,10 @@ let audio_ext_pattern = L.map(fun ext -> "*"^ext) audio_ext
 
 let uk = ""
 let defRate = 44100
-let maxA = (2. ** 16.) /. 2.
-
-let outBufLen = (2*3*4*5*6)* 4 * 8
-let inBufLen = outBufLen * 2 / 4
-
-let inBuf = A.make inBufLen 0.0
-
 
 type state = Single | Repeat | Track | Random | Pause | Off
 
-type talker = {stream : Sndfile.t; nbChs : int; buf : float array}
+type talker = {stream : Sndfile.t}
 
 
 type t = {
@@ -45,6 +38,7 @@ type t = {
 	mutable newFrame : Int64.t;
 	mutable readPercent : int;
 	mutable rate : int;
+	mutable channels : int;
 	mutable voice : talker option
 }
 and node = {
@@ -73,9 +67,11 @@ let currentFrame file = file.curFrame
 let newFrame file = file.newFrame
 let readPercent file = file.readPercent
 let rate file = file.rate
+let channels file = file.channels
 let voice file = file.voice
 let name file = file.fnode.name
 let path file = file.fnode.path
+let filename file = file.fnode.path^file.fnode.name
 let time file = file.fnode.time
 let size file = file.fnode.size
 let kind file = file.fnode.kind
@@ -97,12 +93,12 @@ let makeDir ?(path = "") ?(idx = 0) ?(children = [||]) ?(parent = None) ?(state 
 
 let makeFile ?(idx = 0) ?(parent = None) ?(state = Off) ?(time = uk)
 	?(title = uk) ?(artist = uk) ?(album = uk) ?(genre = uk) ?(voice = None)
-	?(rate = 1) ?(size = uk) name path =
+	?(rate = 1) ?(channels = 1) ?(size = uk) name path =
 		
 	let fnode = {name; path; time; size; kind = Null; idx; parent; state; visible = true}
 	in
 	let file = {title; artist; album; genre; fnode; curFrame = Int64.zero;
-	newFrame = Int64.zero; readPercent = 0; rate; voice}
+	newFrame = Int64.zero; readPercent = 0; rate; channels; voice}
 	in
 	fnode.kind <- File file; file
 
@@ -110,7 +106,7 @@ let makeFile ?(idx = 0) ?(parent = None) ?(state = Off) ?(time = uk)
 
 let unexistentNode = {name = uk; path = uk; time = uk; size = uk; kind = Null; idx = -1; parent = None; state = Off; visible = false}
 let unexistentFile = {title = uk; artist = uk; album = uk; genre = uk;
-	fnode = unexistentNode; curFrame = Int64.zero; newFrame = Int64.zero; readPercent = 0; rate = defRate; voice = None}
+	fnode = unexistentNode; curFrame = Int64.zero; newFrame = Int64.zero; readPercent = 0; rate = defRate; channels = 1; voice = None}
 let unexistentDir = {dnode = unexistentNode; children = [||]}
 (*let unexistent = Dir unexistentDir*)
 
@@ -141,31 +137,31 @@ let size filename =
 let checkPropertys file =
 	
 	if file.rate = 1 then (
-		let filename = file.fnode.path^file.fnode.name in
+		let filename = filename file in
 		
 		file.fnode.size <- size filename;
 		try
+  		let stream = Sndfile.openfile filename in
+
+			file.rate <- Sndfile.samplerate stream;
+			file.channels <- Sndfile.channels stream;
+  		file.fnode.time <- framesSamplerateToTime (Sndfile.frames stream) file.rate;
+
+			Sndfile.close stream;
+			
   		let f = Taglib.File.open_file `Autodetect filename in
   		
   		file.artist <- Taglib.tag_artist f;
   		file.album <- Taglib.tag_album f;
   		file.title <- Taglib.tag_title f;
   		file.genre <- Taglib.tag_genre f;
-  		
+  		(*
   		file.rate <- Taglib.File.audioproperties_samplerate f;
   		file.fnode.time <- secondesToTime(Taglib.File.audioproperties_length f);
-  
+  *)
       Taglib.File.close_file f;
-			true
-		with e -> ( traceMagenta(filename ^ " " ^ Printexc.to_string e);
-  		let stream = Sndfile.openfile filename in
-
-			file.rate <- Sndfile.samplerate stream;
-  		file.fnode.time <- framesSamplerateToTime (Sndfile.frames stream) file.rate;
-
-			Sndfile.close stream;
-			true
-		)
+		true
+		with e -> ( traceMagenta(filename ^ " " ^ Printexc.to_string e); false);
 	)
 	else true
 
@@ -181,30 +177,27 @@ let setReadPercent file readPercent =
 	file.readPercent <- readPercent
 
 
-let checkVoice file =
+let stream file =
 	match file.voice with
 	| None -> (
-		let filename = file.fnode.path^file.fnode.name in
+		let filename = filename file in
 		let stream = Sndfile.openfile filename in
-		let nbChs = Sndfile.channels stream in
 	
-		file.voice <- if nbChs = 2 then Some {stream; nbChs; buf = inBuf}
-									else Some {stream; nbChs;
-										buf = A.make (outBufLen * nbChs / 4) 0.0};
-		true)
-	| Some tkr -> true
+		file.voice <- Some {stream};
+		stream )
+	| Some tkr -> tkr.stream
 
 
-let addIfAudioFile filename l = (*trace("addIfAudioFile "^filename);*)
+let addIfAudioFile filename l =
 	try
 	let (path, name) = splitFilename filename in
 	let p = S.rindex name '.' in
 	let ext = S.sub name p (S.length name - p) in
-	if L.mem ext audio_ext then ( (*trace("add "^filename);*)
+	if L.mem ext audio_ext then (
 		let fnode = makeNode name path in
 		let f = {title = uk; artist = uk; album = uk; genre = uk; fnode;
 						 curFrame = Int64.zero; newFrame = Int64.zero; readPercent = 0;
-						 rate = 1; voice = None}
+						 rate = 1; channels = 1; voice = None}
 		in fnode.kind <- File f;
 		fnode::l)
 	else l
@@ -222,7 +215,7 @@ let load filename excludedFiles =
 			)
 		with e -> (traceMagenta(Printexc.to_string e); l )
 
-	and addDir dirname l = (*trace("add dir "^dirname);*)
+	and addDir dirname l =
 		let sons = Sys.readdir dirname in
 		match (A.fold_left(fun l fn ->
 			if fn.[0] = '.' then l else check (dirname^"/"^fn) l) [] sons) with
@@ -317,7 +310,7 @@ let copy node =
 		match n.kind with
 		| File f -> (
 			let nf = makeFile n.name n.path ~time:n.time ~title:f.title ~artist:f.artist
-			 ~album:f.album ~genre:f.genre ~rate:f.rate ~size:n.size in nf.fnode)
+			 ~album:f.album ~genre:f.genre ~rate:f.rate ~channels:f.channels ~size:n.size in nf.fnode)
 		| Dir d -> (
 			let nd = makeDir ~path:n.path n.name in
 			addChildrenToDir(A.map cp d.children) nd; nd.dnode)
