@@ -136,11 +136,12 @@ let size filename =
 
 let checkPropertys file =
 	
-	if file.rate = 1 then (
+	if file.rate > 1 then true
+	else (
 		let filename = filename file in
 		
 		file.fnode.size <- size filename;
-		try
+		let ok = try
   		let stream = Sndfile.openfile filename in
 
 			file.rate <- Sndfile.samplerate stream;
@@ -148,22 +149,27 @@ let checkPropertys file =
   		file.fnode.time <- framesSamplerateToTime (Sndfile.frames stream) file.rate;
 
 			Sndfile.close stream;
-			
-  		let f = Taglib.File.open_file `Autodetect filename in
-  		
-  		file.artist <- Taglib.tag_artist f;
-  		file.album <- Taglib.tag_album f;
-  		file.title <- Taglib.tag_title f;
-  		file.genre <- Taglib.tag_genre f;
-  		(*
-  		file.rate <- Taglib.File.audioproperties_samplerate f;
-  		file.fnode.time <- secondesToTime(Taglib.File.audioproperties_length f);
-  *)
-      Taglib.File.close_file f;
-		true
-		with e -> ( traceMagenta(filename ^ " " ^ Printexc.to_string e); false);
+			true
+		with e -> ( traceRed(filename ^ " " ^ Printexc.to_string e); false)
+		in
+		if ok then (
+  		try
+    		let f = Taglib.File.open_file `Autodetect filename in
+    		
+    		file.artist <- Taglib.tag_artist f;
+    		file.album <- Taglib.tag_album f;
+    		file.title <- Taglib.tag_title f;
+    		file.genre <- Taglib.tag_genre f;
+    		(*
+    		file.rate <- Taglib.File.audioproperties_samplerate f;
+    		file.fnode.time <- secondesToTime(Taglib.File.audioproperties_length f);
+    *)
+        Taglib.File.close_file f;
+  		true
+  		with e -> (true)
+		)
+		else false
 	)
-	else true
 
 
 let progress file =
