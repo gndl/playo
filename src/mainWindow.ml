@@ -53,6 +53,10 @@ class c (ctrl:Controler.c) = object (self) inherit PlayoGui.mainWindow()
 
 	method filter() = Ev.notify(Ev.Filter searchEntry#text); trace searchEntry#text
 
+	method configuration () =
+		if configurationHbox#misc#visible then configurationHbox#misc#hide()
+		else configurationHbox#misc#show()
+
 		
 	initializer
 		Ev.addObserver (self :> Ev.observer);
@@ -61,6 +65,7 @@ class c (ctrl:Controler.c) = object (self) inherit PlayoGui.mainWindow()
 	  self#bind ~name:"on_searchEntry_changed" ~callback:self#filter;
 	  self#bind ~name:"on_volumeScale_value_changed" ~callback:self#changeVolume;
 	  self#bind ~name:"on_openFileButton_clicked" ~callback:self#openFile;
+	  self#bind ~name:"on_configurationTogglebutton_toggled" ~callback:self#configuration;
 (*
 	  self#bind ~name:"on_newPlaylistToolbarButton_clicked" ~callback:ctrl#newPlaylist;
 	  self#bind ~name:"on_savePlaylistToolbarButton_clicked" ~callback:ctrl#savePlaylist;
