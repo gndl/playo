@@ -260,6 +260,10 @@ class c ?(filenameList = []) () = object (self)
 		);
 
 
+	method restoreHiddenFile filePath =
+		Configuration.removeExcludedFile filePath
+
+
 	method getOutputDevice = mPlayer#getOutputDevice
 	method getOutputDevices = mPlayer#getOutputDevices
 	method changeOutputDevice name = mPlayer#changeOutputDevice name 

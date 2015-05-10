@@ -66,6 +66,7 @@ let removeFile filename = files#set(L.filter(fun fn -> fn <> filename) files#get
 let getFiles = files#get
 
 let addExcludedFile filename = excluded#set(filename :: excluded#get)
+let removeExcludedFile filename = excluded#set(L.filter(fun fn -> fn <> filename) excluded#get)
 let getExcludedFiles = excluded#get
 
 let setPlaylists pls = playlists#set pls

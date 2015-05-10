@@ -38,7 +38,7 @@ let _ =
 	filesModel#setNodes ctrl#nodes;
 
 	let filesView = new FilesView.c filesModel 
-		gui#audioFileTreeView ctrl gui#toplevel in
+		gui#audioFileTreeview ctrl gui#toplevel in
 
 	filesView#init();
   

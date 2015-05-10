@@ -119,7 +119,7 @@
                       <widget class="GtkLabel" id="labelAddMusiquePlace">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Add musique place :</property>
+                        <property name="label" translatable="yes">Add musique :</property>
                       </widget>
                       <packing>
                         <property name="expand">True</property>
@@ -151,17 +151,6 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkTreeView" id="treeviewMusiquePlaces">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">True</property>
-                    <property name="fill">True</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
                   <widget class="GtkHSeparator" id="hseparator1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
@@ -169,36 +158,26 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
+                    <property name="padding">10</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="hiddenFilesLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Restore hidden files :</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">2</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkVBox" id="vboxHiddenMusique">
+                  <widget class="GtkTreeView" id="hiddenFilesTreeview">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <child>
-                      <widget class="GtkLabel" id="label1">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Hidden musique</property>
-                      </widget>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="fill">False</property>
-                        <property name="position">0</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkTreeView" id="treeview1">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                      </widget>
-                      <packing>
-                        <property name="expand">True</property>
-                        <property name="fill">True</property>
-                        <property name="position">1</property>
-                      </packing>
-                    </child>
+                    <property name="can_focus">True</property>
                   </widget>
                   <packing>
                     <property name="expand">True</property>
@@ -221,7 +200,7 @@
                   <widget class="GtkLabel" id="label2">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Choose output device</property>
+                    <property name="label" translatable="yes">Choose output device :</property>
                   </widget>
                   <packing>
                     <property name="expand">False</property>
@@ -261,18 +240,18 @@
             <property name="hscrollbar_policy">automatic</property>
             <property name="vscrollbar_policy">automatic</property>
             <child>
-              <widget class="GtkTreeView" id="audioFileTreeView">
+              <widget class="GtkTreeView" id="audioFileTreeview">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="reorderable">True</property>
                 <property name="rules_hint">True</property>
-                <signal name="move_cursor" handler="on_filesView_move_cursor" swapped="no"/>
-                <signal name="select_cursor_row" handler="on_filesView_select_cursor_row" swapped="no"/>
-                <signal name="enter_notify_event" handler="on_filesView_enter_notify_event" swapped="no"/>
-                <signal name="row_activated" handler="on_filesView_row_activated" swapped="no"/>
                 <signal name="cursor_changed" handler="on_filesView_cursor_changed" swapped="no"/>
                 <signal name="toggle_cursor_row" handler="on_filesView_toggle_cursor_row" swapped="no"/>
                 <signal name="button_release_event" handler="on_filesView_button_release_event" swapped="no"/>
+                <signal name="enter_notify_event" handler="on_filesView_enter_notify_event" swapped="no"/>
+                <signal name="move_cursor" handler="on_filesView_move_cursor" swapped="no"/>
+                <signal name="select_cursor_row" handler="on_filesView_select_cursor_row" swapped="no"/>
+                <signal name="row_activated" handler="on_filesView_row_activated" swapped="no"/>
               </widget>
             </child>
           </widget>
