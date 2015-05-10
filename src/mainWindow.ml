@@ -15,7 +15,7 @@
  *)
 
 open Usual
-open GuiUtility
+(*open GuiUtility*)
 open AudioFile
 open FilesModel
 
@@ -23,21 +23,70 @@ module Ev = AppEvent
 
 (*use "gui.ml";;*)
 
-class c (ctrl:Controler.c) = object (self) inherit PlayoGui.mainWindow()
+class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
+	object (self)
+
+	val mControlPanel = new ControlPanel.c gui ctrl
+
+	initializer
+		Ev.addObserver (self :> Ev.observer);
+
+	  gui#bind ~name:"on_playButton_clicked" ~callback:self#play;
+	  gui#bind ~name:"on_searchEntry_changed" ~callback:self#filter;
+	  gui#bind ~name:"on_volumeScale_value_changed" ~callback:self#changeVolume;
+	  gui#bind ~name:"on_openFileButton_clicked" ~callback:self#openFile;
+	  gui#bind ~name:"on_configurationTogglebutton_toggled" ~callback:self#configuration;
+(*
+	  gui#bind ~name:"on_newPlaylistToolbarButton_clicked" ~callback:ctrl#newPlaylist;
+	  gui#bind ~name:"on_savePlaylistToolbarButton_clicked" ~callback:ctrl#savePlaylist;
+	  gui#bind ~name:"on_savePlaylistAsToolbarButton_clicked" ~callback:self#savePlaylistAs;
+
+	  gui#bind ~name:"on_pauseButton_clicked" ~callback:self#pause;
+	  gui#bind ~name:"on_stopButton_clicked" ~callback:self#stop;
+	  gui#bind ~name:"on_beginButton_clicked" ~callback:self#toBegin;
+	  gui#bind ~name:"on_playToButton_clicked" ~callback:self#playTo;
+	  gui#bind ~name:"on_tickSpinButton_input" ~callback:self#tickEntered;
+*)
+	  ignore(gui#mainWindow#connect#destroy ~callback:self#quit);
+		
+	method init() = ()
+
+(* observer methods *)
+	method notify =	function
+(*		| Ev.State s -> ()*)
+	| Ev.FileChanged file ->
+		gui#trackProgressbar#set_fraction(foi(AudioFile.readPercent file) /. 100.);
+		gui#trackProgressbar#set_text(AudioFile.progress file)
+	| Ev.StartFile f -> (
+		if AudioFile.hasId f then
+			gui#mainWindow#set_title(f.artist^" : "^f.title^" ("^f.album^") - "^appName)
+(*			else gui#mainWindow#set_title(f.fnode.path^f.fnode.name^" - "^appName);*)
+		else gui#mainWindow#set_title(f.fnode.name^" - "^appName);
+	)
+	| Ev.NewPlaylist defName -> (
+			let e = GuiUtility.getEntry gui#toplevel "Enter new playlist name" defName in
+			match e with Some n -> ctrl#newPlaylist n | None -> ()
+		);
+	| Ev.AddFolder -> self#openFile()
+	| Ev.Volume v -> gui#volumeScale#adjustment#set_value v
+	| Ev.Error msg -> traceRed("Error : "^msg);
+										GuiUtility.showErrorMessage gui#toplevel msg
+	| _ -> ()
+
 
 	method openFile() =
-		match selectFile toplevel audioFilter with
+		match GuiUtility.(selectFile gui#toplevel audioFilter) with
 			| Some fl -> ctrl#addFiles fl
 			| None -> ()
 (*
 	method openPlaylist () =
 		match selectFile toplevel sessionFilter with
-			| Some fl -> self#mainWindow#set_title(f^" : "^appName); ctrl#openPlaylist f
+			| Some fl -> gui#mainWindow#set_title(f^" : "^appName); ctrl#openPlaylist f
 			| None -> ()
 *)
 	method savePlaylistAs () =
-		match saveFile toplevel sessionFilter with
-			| Some f -> self#mainWindow#set_title(f^" : "^appName); ctrl#savePlaylistAs f
+		match GuiUtility.(saveFile gui#toplevel sessionFilter) with
+			| Some f -> gui#mainWindow#set_title(f^" : "^appName); ctrl#savePlaylistAs f
 			| None -> ()
 
 	method quit () =
@@ -46,60 +95,20 @@ class c (ctrl:Controler.c) = object (self) inherit PlayoGui.mainWindow()
 		GMain.quit()
 
 
-	method play() = if playButton#get_active then ctrl#play else ctrl#stop
+	method play() = if gui#playButton#get_active then ctrl#play else ctrl#stop
 	method pause = ctrl#pause
 	method stop = ctrl#stop
-	method changeVolume() = ctrl#changeVolume self#volumeScale#adjustment#value
+	method changeVolume() = ctrl#changeVolume gui#volumeScale#adjustment#value
 
-	method filter() = Ev.notify(Ev.Filter searchEntry#text); trace searchEntry#text
+	method filter() = Ev.notify(Ev.Filter gui#searchEntry#text); trace gui#searchEntry#text
 
 	method configuration () =
-		if configurationHbox#misc#visible then configurationHbox#misc#hide()
-		else configurationHbox#misc#show()
-
+		if gui#configurationHbox#misc#visible then
+			gui#configurationHbox#misc#hide()
+		else (
+			mControlPanel#update();
+			gui#configurationHbox#misc#show()
+		)
 		
-	initializer
-		Ev.addObserver (self :> Ev.observer);
-
-	  self#bind ~name:"on_playButton_clicked" ~callback:self#play;
-	  self#bind ~name:"on_searchEntry_changed" ~callback:self#filter;
-	  self#bind ~name:"on_volumeScale_value_changed" ~callback:self#changeVolume;
-	  self#bind ~name:"on_openFileButton_clicked" ~callback:self#openFile;
-	  self#bind ~name:"on_configurationTogglebutton_toggled" ~callback:self#configuration;
-(*
-	  self#bind ~name:"on_newPlaylistToolbarButton_clicked" ~callback:ctrl#newPlaylist;
-	  self#bind ~name:"on_savePlaylistToolbarButton_clicked" ~callback:ctrl#savePlaylist;
-	  self#bind ~name:"on_savePlaylistAsToolbarButton_clicked" ~callback:self#savePlaylistAs;
-
-	  self#bind ~name:"on_pauseButton_clicked" ~callback:self#pause;
-	  self#bind ~name:"on_stopButton_clicked" ~callback:self#stop;
-	  self#bind ~name:"on_beginButton_clicked" ~callback:self#toBegin;
-	  self#bind ~name:"on_playToButton_clicked" ~callback:self#playTo;
-	  self#bind ~name:"on_tickSpinButton_input" ~callback:self#tickEntered;
-*)
-	  ignore(self#mainWindow#connect#destroy ~callback:self#quit);
-		
-
-(* observer methods *)
-	method notify =	function
-(*		| Ev.State s -> ()*)
-	| Ev.FileChanged file ->
-		trackProgressbar#set_fraction(foi(AudioFile.readPercent file) /. 100.);
-		trackProgressbar#set_text(AudioFile.progress file)
-	| Ev.StartFile f -> (
-		if AudioFile.hasId f then
-			self#mainWindow#set_title(f.artist^" : "^f.title^" ("^f.album^") - "^appName)
-(*			else self#mainWindow#set_title(f.fnode.path^f.fnode.name^" - "^appName);*)
-		else self#mainWindow#set_title(f.fnode.name^" - "^appName);
-	)
-	| Ev.NewPlaylist defName -> (
-			let e = GuiUtility.getEntry toplevel "Enter new playlist name" defName in
-			match e with Some n -> ctrl#newPlaylist n | None -> ()
-		);
-	| Ev.AddFolder -> self#openFile()
-	| Ev.Volume v -> self#volumeScale#adjustment#set_value v
-	| Ev.Error msg -> showErrorMessage toplevel msg
-	| _ -> ()
-
 end
 

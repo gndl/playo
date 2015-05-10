@@ -22,7 +22,12 @@ let configFileName = (Sys.getenv "HOME")^"/.playo.conf"
 
 (* Player volume. Its default value is 50% *)
 let volume = new float_cp ~group ["player"; "volume"] 50. "Player volume (%)"
+
+(* Displayed columns *)
 let columns = new list_cp string_wrappers ~group ["player"; "columns"] [] "Displayed columns"
+
+(* Player output device. Its default value is empty *)
+let outputDevice = new string_cp ~group ["player"; "outputDevice"] "" "Player output device"
 
 let files = new list_cp string_wrappers ~group ["library"; "files"] [] "Audio files and folders of the library"
 let excluded = new list_cp string_wrappers ~group ["library"; "excluded"] [] "Audio files and folders excluded from the library"
@@ -51,6 +56,9 @@ let setVolume v = volume#set v
 
 let getColumns = columns#get
 let setColumns cs = columns#set cs
+
+let getOutputDevice = outputDevice#get
+let setOutputDevice v = outputDevice#set v
 
 
 let addFiles filenameList = files#set(files#get @ filenameList)

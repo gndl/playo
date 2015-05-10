@@ -33,6 +33,7 @@ type notification =
 *)
 	Volume of float |
 	Filter of string |
+	OutputDeviceChanged of string |
 	Error of string
 
 class virtual observer () =	object

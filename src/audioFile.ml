@@ -223,8 +223,8 @@ let load filename excludedFiles =
 
 	and addDir dirname l =
 		let sons = Sys.readdir dirname in
-		match (A.fold_left(fun l fn ->
-			if fn.[0] = '.' then l else check (dirname^"/"^fn) l) [] sons) with
+		match (A.fold_left ~f:(fun l fn ->
+			if fn.[0] = '.' then l else check (dirname^"/"^fn) l) ~init:[] sons) with
 			| [] -> l
 			| cl -> let children = A.of_list cl in
 				A.fast_sort(fun n1 n2 -> S.compare n1.name n2.name) children;

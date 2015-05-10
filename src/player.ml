@@ -26,19 +26,24 @@ let terminate() = Portaudio.terminate ()
 
 
 class c () = object (self)
-	val mutable mDevice = 5
 	val mutable mFiles : AudioFile.t list = []
 	val mutable mState = State.Stop
 	val mutable mThread = Thread.self()
 	val mPauseLock = Mutex.create()
 	val mutable mChangeFiles = false
 	val mutable mVolume = maxA /. 2.
+	val mutable mOutputDevice = 0
+	val mutable mNewOutputDevice = 0
 
 
 	initializer
-
-(*		mDevice <- Portaudio.get_default_output_device();
-*)		Ev.addObserver (self :> Ev.observer);
+		try
+			mOutputDevice <- Portaudio.get_default_output_device();
+			mNewOutputDevice <- mOutputDevice;
+		with Portaudio.Error code -> (
+				Ev.notify(Ev.Error(Portaudio.string_of_error code));
+  	);
+		Ev.addObserver (self :> Ev.observer);
 
 
 	method getState = mState
@@ -66,6 +71,48 @@ class c () = object (self)
 		if mState <> State.Play then self#play;
 
 
+	method getOutputDevice =
+		Portaudio.((get_device_info mNewOutputDevice).d_name)
+
+	method changeOutputDevice newOutputDeviceName =
+		let open Portaudio in
+    let dcount = Portaudio.get_device_count () in
+
+		let rec search id =
+			if id < dcount then (
+		    let dinfo = Portaudio.get_device_info id in
+				
+				if dinfo.d_name = newOutputDeviceName then id else search(id + 1)
+			)
+			else -1
+		in
+		
+		let newOutputDevice = search 0 in
+		
+		if newOutputDevice >= 0 && newOutputDevice <> mOutputDevice then (
+			mNewOutputDevice <- newOutputDevice;
+		)
+
+
+	method getOutputDevices =
+		let open Portaudio in
+    let dcount = Portaudio.get_device_count () in
+
+		let rec search id lst =
+			if id < dcount then (
+				
+        let dinfo = Portaudio.get_device_info id in
+				
+				if dinfo.d_max_output_channels > 0 then
+					search(id + 1) (dinfo.d_name::lst) 
+				else
+					search(id + 1) lst
+			)
+			else lst
+		in
+		L.rev(search 0 [])
+
+
 	method play = ( match mState with
 			| State.Play -> ()
 			| State.Pause -> mState <- State.Play; Mutex.unlock mPauseLock
@@ -91,20 +138,23 @@ class c () = object (self)
 		| _ -> ()
 
 	
-	method private run() =(* *)traceCyan"PLAY";
+	method private run() =
+(*		try
+*)		traceCyan"PLAY";
+		
 		self#threadSetState State.Play;
 
 		let inBufLen = 10080 in
 
-		let makeOutputStream file =
-			
+		let rec makeOutputStream file device =
+			try
   		let rate = foi(AudioFile.rate file) in
 			let channels = AudioFile.channels file in
 			let bufframes = inBufLen / channels in
-			
+
   		let outparam = Portaudio.{
   			channels;
-				device = mDevice;
+				device = mOutputDevice;
   			sample_format = format_float32;
 				latency = 1.
 				}
@@ -113,18 +163,34 @@ class c () = object (self)
   		let stream = Portaudio.open_stream None (Some outparam) ~interleaved:true rate bufframes []
 			in
 			Portaudio.start_stream stream;
+			
+			if device <> mOutputDevice || device <> mNewOutputDevice then (
+				mOutputDevice <- device;
+				mNewOutputDevice <- device;
+				Ev.notify(Ev.OutputDeviceChanged self#getOutputDevice);
+			);
+			
 			stream
+			with Portaudio.Error code -> (
+				Ev.notify(Ev.Error(Portaudio.string_of_error code));
+				
+				(* If the new device raise an error, we fallback to the previous device *)
+				if device <> mOutputDevice then
+					makeOutputStream file mOutputDevice
+				else
+					raise (Portaudio.Error code)
+			)
 		in
 
 		let defOutputStream file prevFile = function
-			| None -> makeOutputStream file
+			| None -> makeOutputStream file mNewOutputDevice
 			| Some stream ->
-				if file == prevFile
+				if file == prevFile || mNewOutputDevice <> mOutputDevice
 					|| (AudioFile.rate file) <> (AudioFile.rate prevFile)
 					|| (AudioFile.channels file) <> (AudioFile.channels prevFile)
 				then (
 					Portaudio.close_stream stream;
-					makeOutputStream file
+					makeOutputStream file mNewOutputDevice
 				)
 				else stream
 		in
@@ -132,12 +198,11 @@ class c () = object (self)
 		let open Bigarray in
 
 		let inputBuffer = A.make inBufLen 0. in
-(*		let outputBuffer = Genarray.create float32 c_layout [|inBufLen|] in*)
 		let outputBuffer = Array1.create float32 c_layout inBufLen in
 		let genOutputBuffer = genarray_of_array1 outputBuffer in
 		
 		let playChunk file outputStream =
-
+			try
 			let channels = AudioFile.channels file in
 			let stream = AudioFile.stream file in
 			let readcount = Sndfile.read stream inputBuffer in
@@ -146,11 +211,12 @@ class c () = object (self)
 				
 				for i = 0 to readcount - 1 do
 					outputBuffer.{i} <- (inputBuffer.(i) *. mVolume);
-					(*Genarray.set outputBuffer [|i|] (inputBuffer.(i) *. mVolume);*)
 				done;
 
-        Portaudio.write_stream_ba outputStream genOutputBuffer 0 (readcount / channels);
-				
+(* *)				
+       	Portaudio.write_stream_ba outputStream genOutputBuffer 0
+																		(readcount / channels);
+(**)
 				if file.newFrame = file.curFrame then (
 					let framesRead = Int64.of_int(readcount / channels) in
 					file.newFrame <- Int64.add file.curFrame framesRead;
@@ -173,24 +239,36 @@ class c () = object (self)
 				file.curFrame <- Int64.zero;
 				(*file.readPercent <- 0;
 				Ev.notify(FileChanged file);*)
-				false)
+				false
+			)
+			with Portaudio.Error code -> (
+				Ev.notify(Ev.Error(Portaudio.string_of_error code));
+				false
+			)
 		in
 		let rec playFile file outputStream =
 	
 			if mChangeFiles then (
 				mChangeFiles <- false;
-				false
+				(false, outputStream)
 			)
 			else (
+				let outputStream =
+					if mNewOutputDevice <> mOutputDevice then (
+						defOutputStream file file (Some outputStream)
+					)
+					else outputStream
+				in
 				match mState with
 				| State.Play ->
 					if playChunk file outputStream then
 						playFile file outputStream
-					else true
+					else
+						(true, outputStream)
 				| State.Pause -> Ev.notify(Ev.PauseFile file); Mutex.lock mPauseLock;
 					Mutex.unlock mPauseLock; Ev.notify(Ev.StartFile file);
 					playFile file outputStream
-				| State.Stop -> Ev.notify(Ev.State mState); false
+				| State.Stop -> Ev.notify(Ev.State mState); (false, outputStream)
 			)
 		in
 		let rec iterFiles prevFile outputStreamOpt = function
@@ -208,12 +286,12 @@ class c () = object (self)
   					file.curFrame <- file.newFrame;
   				);
   				
-					let continu = playFile file os in
+					let (continu, outputStream) = playFile file os in
 					
 					Ev.notify(Ev.EndFile file);
 					
-					if continu then iterFiles file (Some os) tl
-					else (Some os)
+					if continu then iterFiles file (Some outputStream) tl
+					else (Some outputStream)
 				)
 			)
 		in
@@ -227,10 +305,10 @@ class c () = object (self)
 		in
 		loop None;
 
+(*		with e -> Ev.notify(Ev.Error(Printexc.to_string e));
+*)
 		self#threadSetState State.Stop;
 		traceCyan"STOP";
-
-		(*with x -> Ev.notify(Error "faile to open device");*)
 
 end
 

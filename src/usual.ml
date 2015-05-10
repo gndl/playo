@@ -14,8 +14,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *)
 
-module A = Array
-module L = List
+module A = ArrayLabels
+module L = ListLabels
 module S = String
 
 let appName = "Playo"

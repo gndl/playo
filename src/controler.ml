@@ -39,31 +39,68 @@ class c ?(filenameList = []) () = object (self)
 		Ev.addObserver (self :> Ev.observer);
 		mNodes <- [|mPlaylists.dnode; mFolders.dnode|];
 (*		mNodes <- [|mPlaylists|];*)
-		Config.addFiles filenameList;
+		Configuration.addFiles filenameList;
 
 
 	method init() =
-		self#changeVolume Config.getVolume;
-		self#addFiles ~save:false Config.getFiles;
+		self#changeVolume Configuration.getVolume;
+		self#addFiles ~save:false Configuration.getFiles;
 		
 		L.iter(fun (playlistName, files) -> self#newPlaylist playlistName;
 			L.iter(fun (fileName, filePath) ->
 				self#addNode(AudioFile.makeFile fileName filePath).fnode;
 			) files;
-		) Config.getPlaylists;
+		) Configuration.getPlaylists;
+
+		let outputDevice = Configuration.getOutputDevice
+		in
+		trace("outputDevice : "^outputDevice);
+		if L.mem outputDevice ~set:mPlayer#getOutputDevices then
+			mPlayer#changeOutputDevice outputDevice
+		else
+			Configuration.setOutputDevice mPlayer#getOutputDevice
+
 
 	method release() =
 		AudioFile.close mNodes;
 		
-		Config.setPlaylists(A.fold_right(fun pl pls ->
+		Configuration.setPlaylists(A.fold_right ~f:(fun pl pls ->
 			match pl.kind with
-			| Dir d -> (pl.name, A.fold_right(fun f fs ->
-				(f.name, f.path) :: fs) d.children []) :: pls
+			| Dir d -> (pl.name, A.fold_right ~f:(fun f fs ->
+				(f.name, f.path) :: fs) d.children ~init:[]) :: pls
 			| _ -> [("ERROR", [])]
-		) mPlaylists.children []);
+		) mPlaylists.children ~init:[]);
 		
-		Config.save();
+		Configuration.save();
 		trace "Bye"
+
+(* observer methods *)
+	method notify =	function
+(*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
+		| Ev.StartFile f -> f.fnode.state <- mPlayMode;
+				L.iter(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
+(*
+			match f.fnode.state with
+			| Off -> f.fnode.state <- if mPlayMode = Repeat then Single else mPlayMode
+			| _ -> ()*)
+		| Ev.PauseFile f -> f.fnode.state <- Pause;
+				L.iter(fun nd -> nd.state <- Pause) mSelectedNodes;
+		| Ev.EndFile f -> f.fnode.state <- Off(*
+			match f.fnode.state with
+			| Repeat -> ()
+			| _ -> f.fnode.state <- Off*)
+		| Ev.EndList f -> (
+			match mPlayMode with
+			| Repeat -> ()
+			| Track -> (
+				match AudioFile.next f.fnode mNodes with
+				| Some nd -> self#changeFiles [nd]
+				| None -> self#changeFiles []
+			)
+			| _ -> self#changeFiles [])
+		| Ev.Volume v -> Configuration.setVolume v
+		| Ev.OutputDeviceChanged od -> Configuration.setOutputDevice od
+		| _ -> ()
 
 (*
 	method getState = Browser.state mPlayer
@@ -106,13 +143,13 @@ class c ?(filenameList = []) () = object (self)
 
 	method addFiles ?(save = true) filenameList =
 		let ll = L.map(fun fn -> trace("add "^fn);
-			AudioFile.load fn Config.getExcludedFiles) filenameList
+			AudioFile.load fn Configuration.getExcludedFiles) filenameList
 		in
 		let children = A.of_list(L.flatten ll) in
 		AudioFile.addChildrenToDir children mFolders;
 		A.iter(fun nd -> Ev.notify(Ev.AddFile nd)) children;
 		(*mNodes <- AudioFile.concatChildren mNodes (A.of_list(L.flatten ll));*)
-		if save then Config.addFiles filenameList;
+		if save then Configuration.addFiles filenameList;
 
 
 	method setPlayMode playMode = mPlayMode <- playMode
@@ -139,10 +176,10 @@ class c ?(filenameList = []) () = object (self)
 					(match nd.parent with (* if the dir is a playlist, define it as the current playlist *)
 					| Some p -> if p == mPlaylists then mCurPlaylist <- d;
 					| None -> ());
-					A.fold_left mkFileLst fl d.children)
+					A.fold_left ~f:mkFileLst ~init:fl d.children)
 				| Null -> traceRed("Node "^nd.name^"'s kind is NULL!"); fl
 			in
-			let fileLst = A.fold_left mkFileLst [] (A.of_list nodes) in
+			let fileLst = A.fold_left ~f:mkFileLst ~init:[] (A.of_list nodes) in
 			mPlayer#changeFiles(L.rev(fileLst))
 		)
 
@@ -189,7 +226,7 @@ class c ?(filenameList = []) () = object (self)
 			let rec mkFileLst fl nd =
 				match nd.kind with
 				| File f -> nd::fl
-				| Dir d -> A.fold_left mkFileLst fl d.children
+				| Dir d -> A.fold_left ~f:mkFileLst ~init:fl d.children
 				| Null -> fl
 			in
 			if node != mPlaylists.dnode
@@ -212,45 +249,21 @@ class c ?(filenameList = []) () = object (self)
 			match node.parent with
 			| Some p -> AudioFile.supNode node p;
 
-				if p == mFolders then Config.removeFile fullFileName
+				if p == mFolders then Configuration.removeFile fullFileName
 				else (
 					match p.dnode.parent with
-					| Some pp -> if pp != mPlaylists then Config.addExcludedFile(fullFileName);
-					| None -> Config.removeFile fullFileName;
+					| Some pp -> if pp != mPlaylists then Configuration.addExcludedFile(fullFileName);
+					| None -> Configuration.removeFile fullFileName;
 				)
 			| None -> mNodes <- AudioFile.supNodeByIndex node.idx mNodes;
-				Config.removeFile fullFileName
+				Configuration.removeFile fullFileName
 		);
 
 
-
-(* observer methods *)
-	method notify =	function
-(*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
-		| Ev.StartFile f -> f.fnode.state <- mPlayMode;
-				L.iter(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
-(*
-			match f.fnode.state with
-			| Off -> f.fnode.state <- if mPlayMode = Repeat then Single else mPlayMode
-			| _ -> ()*)
-		| Ev.PauseFile f -> f.fnode.state <- Pause;
-				L.iter(fun nd -> nd.state <- Pause) mSelectedNodes;
-		| Ev.EndFile f -> f.fnode.state <- Off(*
-			match f.fnode.state with
-			| Repeat -> ()
-			| _ -> f.fnode.state <- Off*)
-		| Ev.EndList f -> (
-			match mPlayMode with
-			| Repeat -> ()
-			| Track -> (
-				match AudioFile.next f.fnode mNodes with
-				| Some nd -> self#changeFiles [nd]
-				| None -> self#changeFiles []
-			)
-			| _ -> self#changeFiles [])
-		| Ev.Volume v -> Config.setVolume v
-		| _ -> ()
-
+	method getOutputDevice = mPlayer#getOutputDevice
+	method getOutputDevices = mPlayer#getOutputDevices
+	method changeOutputDevice name = mPlayer#changeOutputDevice name 
+	
 end
 
 let make ?(filenameList = []) () =

@@ -18,8 +18,8 @@ open Usual
 
 let _ =
 	try
-	let fl = A.fold_left(fun fl f -> if Sys.file_exists f then f::fl else fl)
-			[] (A.sub Sys.argv 1 (A.length Sys.argv - 1))
+	let fl = A.fold_left ~f:(fun fl f -> if Sys.file_exists f then f::fl else fl)
+			~init:[] (A.sub Sys.argv 1 (A.length Sys.argv - 1))
 	in
 	
 	Player.initialize();
@@ -28,14 +28,17 @@ let _ =
 
 	ignore(GtkMain.Main.init());
 
-	let mainWindow = new MainWindow.c ctrl in
+	let gui = new PlayoGui.mainWindow() in
+
+	let mainWindow = new MainWindow.c gui ctrl in
+	mainWindow#init();
 	let filesModel = new FilesModel.c in
 
 	ctrl#init();
 	filesModel#setNodes ctrl#nodes;
 
 	let filesView = new FilesView.c filesModel 
-		mainWindow#treeView ctrl mainWindow#toplevel in
+		gui#audioFileTreeView ctrl gui#toplevel in
 
 	filesView#init();
   

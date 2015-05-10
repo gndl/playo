@@ -172,7 +172,7 @@ class c = object (self)
 		
 		let rec fltr visible row =
 			row.visible <- (match row.kind with
-			| Dir dir -> A.fold_left fltr false dir.children
+			| Dir dir -> A.fold_left ~f:fltr ~init:false dir.children
 					|| (try ignore(Str.search_forward regexp (S.lowercase row.name) 0);
 			  				true
   						with Not_found -> false)
@@ -196,7 +196,7 @@ class c = object (self)
 
 			visible || row.visible
 		in
-		ignore(A.fold_left fltr false mRootDirs)
+		ignore(A.fold_left ~f:fltr ~init:false mRootDirs)
 
 
 (* observer methods *)
