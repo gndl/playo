@@ -19,10 +19,30 @@ open StdLabels
 open AudioFile
 open FilesModel
 
+let getIndex elem list =
+	let rec loop i = function
+		| [] -> -1
+		| e::tl -> if e = elem then i else loop(i + 1) tl
+	in
+	loop 0 list
+
+let addColName = "Add"
+let nameColName = "Name"
+let titleColName = "Title"
+let artistColName = "Artist"
+let albumColName = "Album"
+let genreColName = "Genre"
+let timeColName = "Time"
+let sizeColName = "Size"
+let pathColName = "Path"
+let supColName = "Sup"
+
+let columns = [addColName; nameColName; titleColName; artistColName; albumColName; genreColName; timeColName; sizeColName; pathColName; supColName]
+
+
 class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) toplevel =
 	let nullColumn = GTree.view_column() in
 	object (self)
-	val mutable mColumns = ["Add"; "Name"; "Title"; "Artist"; "Album"; "Genre"; "Time"; "Size"; "Path"; "Sup"]
 	val mutable mAddCol = nullColumn
 	val mutable mNameCol = nullColumn
 	val mutable mTitleCol = nullColumn
@@ -53,85 +73,88 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 		ignore(filesTreeview#event#connect#button_press ~callback:self#buttonPressed);
 		ignore(filesTreeview#event#connect#button_release ~callback:self#buttonReleased);
-(*		ignore(filesTreeview#event#connect#key_press ~callback:self#keyPressed);
-		ignore(filesTreeview#event#connect#key_release ~callback:self#keyReleased);
-*)
 		ignore(filesTreeview#connect#row_activated ~callback:self#activeHoverMode);
 	  ignore(filesTreeview#connect#cursor_changed ~callback:self#changeFiles);
-	  (*ignore(filesTreeview#connect#move_cursor ~callback:(fun step ->trace"on_filesView_move_cursor"));
-	  ignore(filesTreeview#connect#select_cursor_row ~callback:(fun()->trace"on_filesView_select_cursor_row"));
-	  ignore(filesTreeview#connect#toggle_cursor_row ~callback:(fun()->trace"on_filesView_toggle_cursor_row"));
-*)
+
 		let txtRndrr = GTree.cell_renderer_text [] in
 
 		let pixRndrr = GTree.cell_renderer_pixbuf [`STOCK_ID "gtk-add"] in
 
 		let addColumn columnName =
 			
-			if columnName = "Add" then (
+			if columnName = addColName then (
     		mAddCol <- GTree.view_column ~renderer:(pixRndrr,[]) ();
+				mAddCol#set_sort_column_id(getIndex columnName columns);
     		ignore(filesTreeview#append_column mAddCol);
 			)
-			else if columnName = "Name" then (
+			else if columnName = nameColName then (
     		let sttRndrr = GTree.cell_renderer_pixbuf [`STOCK_ID "gtk-media-play"; `VISIBLE false] in
-    (*		let col = GTree.view_column ~title:"Name" ~renderer:(txtRndrr,["text", nameColumn])() in*)
-    		mNameCol <- GTree.view_column ~title:"Name"();
+    		mNameCol <- GTree.view_column ~title:columnName();
     		mNameCol#pack sttRndrr;
     		mNameCol#set_cell_data_func sttRndrr (self#renderState sttRndrr);
     		mNameCol#pack txtRndrr;
     		mNameCol#add_attribute txtRndrr "text" nameColumn;
     		mNameCol#set_resizable true;
+				mNameCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mNameCol);
     		filesTreeview#set_expander_column (Some mNameCol);
 			)
-			else if columnName = "Title" then (
-    		mTitleCol <- GTree.view_column ~title:"Title" ~renderer:(txtRndrr,["text", titleColumn]) ();
+			else if columnName = titleColName then (
+    		mTitleCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", titleColumn]) ();
     		mTitleCol#set_resizable true;
+				mTitleCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mTitleCol);
 			)
-			else if columnName = "Artist" then (
-    		mArtistCol <- GTree.view_column ~title:"Artist" ~renderer:(txtRndrr,["text", artistColumn]) ();
+			else if columnName = artistColName then (
+    		mArtistCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", artistColumn]) ();
     		mArtistCol#set_resizable true;
+				mArtistCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mArtistCol);
 			)
-			else if columnName = "Album" then (
-    		mAlbumCol <- GTree.view_column ~title:"Album" ~renderer:(txtRndrr,["text", albumColumn]) ();
+			else if columnName = albumColName then (
+    		mAlbumCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", albumColumn]) ();
     		mAlbumCol#set_resizable true;
+				mAlbumCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mAlbumCol);
 			)
-			else if columnName = "Genre" then (
-    		mGenreCol <- GTree.view_column ~title:"Genre" ~renderer:(txtRndrr,["text", genreColumn]) ();
+			else if columnName = genreColName then (
+    		mGenreCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", genreColumn]) ();
     		mGenreCol#set_resizable true;
+				mGenreCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mGenreCol);
 			)
-			else if columnName = "Time" then (
+			else if columnName = timeColName then (
     		let prgRndrr = GTree.cell_renderer_progress [] in
-    		mTimeCol <- GTree.view_column ~title:"Time" ~renderer:(prgRndrr,["text", timeColumn]) ();
+    		mTimeCol <- GTree.view_column ~title:columnName ~renderer:(prgRndrr,["text", timeColumn]) ();
     (*	col#add_attribute rndrr "value" readPercentColumn;*)
     		mTimeCol#set_cell_data_func prgRndrr (self#renderProgress prgRndrr);
     		mTimeCol#set_resizable true;
 (*				col#set_sizing `AUTOSIZE;*)
+				mTimeCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mTimeCol);
 			)
-			else if columnName = "Size" then (
-    		mSizeCol <- GTree.view_column ~title:"Size" ~renderer:(txtRndrr,["text", sizeColumn]) ();
+			else if columnName = sizeColName then (
+    		mSizeCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", sizeColumn]) ();
     		mSizeCol#set_resizable true;
+				mSizeCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mSizeCol);
 			)
-			else if columnName = "Path" then (
-    		mPathCol <- GTree.view_column ~title:"Path" ~renderer:(txtRndrr,["text", pathColumn]) ();
+			else if columnName = pathColName then (
+    		mPathCol <- GTree.view_column ~title:columnName ~renderer:(txtRndrr,["text", pathColumn]) ();
     		mPathCol#set_resizable true;
+				mPathCol#set_sort_column_id(getIndex columnName columns);
 				ignore(filesTreeview#append_column mPathCol);
 			)
-			else if columnName = "Sup" then (
+			else if columnName = supColName then (
     		let pixRndrr = GTree.cell_renderer_pixbuf [`STOCK_ID "gtk-close"] in
     		mSupCol <- GTree.view_column ~renderer:(pixRndrr,[]) ();
+				mSupCol#set_sort_column_id(getIndex columnName columns);
     		ignore(filesTreeview#append_column mSupCol);
 			)
 		in
 		
 		L.iter addColumn (match Configuration.getColumns with
-			| [] -> Configuration.setColumns mColumns; mColumns
+			| [] -> Configuration.setColumns columns; columns
 			| l -> l);
 
 (*
@@ -214,26 +237,27 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 	method buttonPressed ev =
 		mButtonPressed <- true;
-		let x = int_of_float (GdkEvent.Button.x ev) in
-		let y = int_of_float (GdkEvent.Button.y ev) in
+		let x = iof (GdkEvent.Button.x ev) in
+		let y = iof (GdkEvent.Button.y ev) in
 
 		match filesTreeview#get_path_at_pos ~x ~y with
 		| None -> false
 		| Some (path, col, colX, colY) -> (
-
-			if mTimeCol#as_column = col#as_column then (
+			let colId = col#get_sort_column_id in
+			
+			if mTimeCol#get_sort_column_id = colId then (
 				match filesModel#custom_get_iter path with
 				| Some {kind = File f} ->
 					ctrl#setFilePosition f ((colX * 10000) / col#width);
 					filesModel#custom_row_changed path f.fnode; true
 				| _ -> false
 			)
-			else if mAddCol = col then (
+			else if mAddCol#get_sort_column_id = colId then (
 				match filesModel#custom_get_iter path with
 				| Some node -> ctrl#addNode node; true
 				| None -> false
 			)
-			else if mSupCol = col then (
+			else if mSupCol#get_sort_column_id = colId then (
 				match filesModel#custom_get_iter path with
 				| Some node -> ctrl#supNode node; true
 				| None -> false
@@ -368,7 +392,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 		| _ -> prgRndrr#set_properties [`VISIBLE false]
 
 
-(* observer methods *)
+	(* observer methods *)
 	method notify =	function
 		| Ev.StartFile f ->
 			let path = filesModel#custom_get_path f.fnode in
