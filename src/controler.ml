@@ -266,7 +266,9 @@ class c ?(filenameList = []) () = object (self)
 
 	method getOutputDevice = mPlayer#getOutputDevice
 	method getOutputDevices = mPlayer#getOutputDevices
-	method changeOutputDevice name = mPlayer#changeOutputDevice name 
+	method changeOutputDevice name =
+		Configuration.setOutputDevice name;
+		mPlayer#changeOutputDevice name 
 	
 end
 
