@@ -1,8 +1,8 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 537eb2c2d9b222b293115f62b48bc632) *)
+(* DO NOT EDIT (digest: 67a142034507701c4392c1eb84e05fd6) *)
 
 Authors of playo:
 
-* gndl
+* Gaëtan Dubreil
 
 (* OASIS_STOP *)
