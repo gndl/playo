@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 GaÃ«tan Dubreil
+ * Copyright (C) 2015 Gaëtan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -28,10 +28,6 @@ type notification =
 	SupFile of AudioFile.node |
 	NewPlaylist of string |
 	AddFolder |
-(*	AddPlaylist of AudioFile.dir |
-	SupPlaylist of AudioFile.dir |
-*)
-	Volume of float |
 	Filter of string |
 	OutputDeviceChanged of string |
 	Error of string

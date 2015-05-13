@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 GaÃ«tan Dubreil
+ * Copyright (C) 2015 Gaëtan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -43,7 +43,7 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method init() =
-		self#changeVolume Configuration.getVolume;
+		mPlayer#setVolume Configuration.getVolume;
 		self#addFiles ~save:false Configuration.getFiles;
 		
 		L.iter(fun (playlistName, files) -> self#newPlaylist playlistName;
@@ -98,7 +98,6 @@ class c ?(filenameList = []) () = object (self)
 				| None -> self#changeFiles []
 			)
 			| _ -> self#changeFiles [])
-		| Ev.Volume v -> Configuration.setVolume v
 		| Ev.OutputDeviceChanged od -> Configuration.setOutputDevice od
 		| _ -> ()
 
@@ -113,8 +112,11 @@ class c ?(filenameList = []) () = object (self)
 	method pause = 	mPlayer#pause;
 	method stop = mPlayer#stop;
 		
-	method changeVolume volumePercent =
-		Ev.notify(Ev.Volume volumePercent);
+	method setVolume volumePercent =
+		mPlayer#setVolume volumePercent;
+		Configuration.setVolume volumePercent;
+
+	method getVolume = Configuration.getVolume
 
 		
 	method checkPropertys file =

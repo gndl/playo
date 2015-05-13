@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 GaÃ«tan Dubreil
+ * Copyright (C) 2015 Gaëtan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -49,6 +49,9 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 *)
 	  ignore(gui#mainWindow#connect#destroy ~callback:self#quit);
 		
+		gui#volumeScale#adjustment#set_value ctrl#getVolume
+		
+		
 	method init() = ()
 
 (* observer methods *)
@@ -68,7 +71,6 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 			match e with Some n -> ctrl#newPlaylist n | None -> ()
 		);
 	| Ev.AddFolder -> self#openFile()
-	| Ev.Volume v -> gui#volumeScale#adjustment#set_value v
 	| Ev.Error msg -> traceRed("Error : "^msg);
 										GuiUtility.showErrorMessage gui#toplevel msg
 	| _ -> ()
@@ -98,7 +100,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 	method play() = if gui#playButton#get_active then ctrl#play else ctrl#stop
 	method pause = ctrl#pause
 	method stop = ctrl#stop
-	method changeVolume() = ctrl#changeVolume gui#volumeScale#adjustment#value
+	method changeVolume() = ctrl#setVolume gui#volumeScale#adjustment#value
 
 	method filter() = Ev.notify(Ev.Filter gui#searchEntry#text); trace gui#searchEntry#text
 

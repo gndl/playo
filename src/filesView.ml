@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 GaÃ«tan Dubreil
+ * Copyright (C) 2015 Gaëtan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -217,22 +217,6 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 			in
 			ctrl#changeFiles rowList;
 		)
-(*
-		let (selectionIsNew, rowList) = ListLabels.fold_left
-			~f:(fun(sin, rl) path -> match filesModel#custom_get_iter path with
-				| Some r -> trace("row "^r.name^" selected");
-					((if r != mSelectedRow then true else sin), r::rl)
-				| None -> traceRed "Path not found !"; (sin, rl))
-			~init:(false, []) filesTreeview#selection#get_selected_rows in
-		if selectionIsNew then (
-			try mSelectedRow <- L.hd rowList;
-			ctrl#changeFiles rowList;
-			with Failure e -> ()
-		)
-		else (
-			if not filesTreeview#hover_selection then
-				if ctrl#player#isPlaying then ctrl#player#pause else ctrl#player#play;
-		);*)
 
 
 	method buttonPressed ev =

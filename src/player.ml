@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 GaÃ«tan Dubreil
+ * Copyright (C) 2015 Gaëtan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -43,7 +43,6 @@ class c () = object (self)
 		with Portaudio.Error code -> (
 				Ev.notify(Ev.Error(Portaudio.string_of_error code));
   	);
-		Ev.addObserver (self :> Ev.observer);
 
 
 	method getState = mState
@@ -53,23 +52,14 @@ class c () = object (self)
 		if mState <> s then (mState <- s; Ev.notify(Ev.State mState))
 
 	method isPlaying = mState = State.Play
-(*
-	method changeFile file =
-		if mFiles != file then (
-			match file.voice with
-				| None -> ()
-				| Some v -> (
-					mFiles <- file;
-					mChangeFiles <- true;
-					Ev.notify(CurrentFile mFiles);
-			);
-		); Thread.yield()
-*)
+
 	method changeFiles files =
 		mFiles <- files;
 		mChangeFiles <- true;
 		if mState <> State.Play then self#play;
 
+
+	method setVolume volumePercent = mVolume <- (volumePercent *. maxA) /. 100.
 
 	method getOutputDevice =
 		Portaudio.((get_device_info mNewOutputDevice).d_name)
@@ -131,11 +121,6 @@ class c () = object (self)
 			| State.Play -> mState <- State.Stop; Thread.join mThread
 			| State.Pause -> mState <- State.Stop; Mutex.unlock mPauseLock; Thread.join mThread
 			| State.Stop -> ()
-
-(* observer methods *)
-	method notify =	function
-		| Ev.Volume volumePercent -> mVolume <- (volumePercent *. maxA) /. 100.
-		| _ -> ()
 
 	
 	method private run() =
