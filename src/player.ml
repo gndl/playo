@@ -17,9 +17,11 @@
 open Usual
 open AudioFile
 
+module Ev = AppEvent
+
 let maxA = 1.
 
-module Ev = AppEvent
+let errorCodeOutputUnderflowed = -9980
 
 let initialize() = Portaudio.init ()
 let terminate() = Portaudio.terminate ()
@@ -233,8 +235,16 @@ class c () = object (self)
 				false
 			)
 			with Portaudio.Error code -> (
-				Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));
-				false
+				let msg = "Portaudio.write_stream_ba Error code "^soi code^" : "^Portaudio.string_of_error code
+				in
+				if code = errorCodeOutputUnderflowed then (
+					traceYellow msg;
+					true
+				)
+				else (
+					Ev.asyncNotify(Ev.Error msg);
+					false
+				)
 			)
 		in
 		let rec playFile file outputStream =

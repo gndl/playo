@@ -35,7 +35,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 	  gui#bind ~name:"on_searchEntry_changed" ~callback:self#filter;
 	  gui#bind ~name:"on_volumeScale_value_changed" ~callback:self#changeVolume;
 	  gui#bind ~name:"on_openFileButton_clicked" ~callback:self#openFile;
-	  gui#bind ~name:"on_configurationTogglebutton_toggled" ~callback:self#configuration;
+	  gui#bind ~name:"on_preferencesToggletoolbutton_toggled" ~callback:self#configuration;
 (*
 	  gui#bind ~name:"on_newPlaylistToolbarButton_clicked" ~callback:ctrl#newPlaylist;
 	  gui#bind ~name:"on_savePlaylistToolbarButton_clicked" ~callback:ctrl#savePlaylist;
