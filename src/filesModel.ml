@@ -200,7 +200,7 @@ class c = object (self)
 
 
 (* observer methods *)
-	method notify =	 function
+	method update =	 function
 		| Ev.FileChanged file -> self#updateNode file.fnode
 		| Ev.NodeChanged nd -> self#updateNode nd
 		| Ev.AddFile nd ->

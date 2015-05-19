@@ -377,7 +377,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 
 	(* observer methods *)
-	method notify =	function
+	method update =	function
 		| Ev.StartFile f ->
 			let path = filesModel#custom_get_path f.fnode in
 			filesTreeview#expand_to_path path;

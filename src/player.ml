@@ -41,22 +41,20 @@ class c () = object (self)
 			mOutputDevice <- Portaudio.get_default_output_device();
 			mNewOutputDevice <- mOutputDevice;
 		with Portaudio.Error code -> (
-				Ev.notify(Ev.Error(Portaudio.string_of_error code));
+(*				Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));*)
+			traceRed(Portaudio.string_of_error code);
   	);
 
 
 	method getState = mState
 (*	method setState s = mState <- s*)
 
-	method private threadSetState s =
-		if mState <> s then (mState <- s; Ev.notify(Ev.State mState))
-
 	method isPlaying = mState = State.Play
 
 	method changeFiles files =
 		mFiles <- files;
 		mChangeFiles <- true;
-		if mState <> State.Play then self#play;
+		if mState <> State.Play && L.length files > 0 then self#play;
 
 
 	method setVolume volumePercent = mVolume <- (volumePercent *. maxA) /. 100.
@@ -125,9 +123,17 @@ class c () = object (self)
 	
 	method private run() =
 (*		try
-*)		traceCyan"PLAY";
+*)
+		let setState s =
+			if mState <> s then (
+				mState <- s;
+				Ev.asyncNotify(Ev.State mState)
+			)
+		in
+
+		traceCyan"PLAY";
 		
-		self#threadSetState State.Play;
+		setState State.Play;
 
 		let inBufLen = 10080 in
 
@@ -139,7 +145,7 @@ class c () = object (self)
 
   		let outparam = Portaudio.{
   			channels;
-				device = mOutputDevice;
+				device;
   			sample_format = format_float32;
 				latency = 1.
 				}
@@ -152,13 +158,13 @@ class c () = object (self)
 			if device <> mOutputDevice || device <> mNewOutputDevice then (
 				mOutputDevice <- device;
 				mNewOutputDevice <- device;
-				Ev.notify(Ev.OutputDeviceChanged self#getOutputDevice);
+				Ev.asyncNotify(Ev.OutputDeviceChanged self#getOutputDevice);
 			);
 			
 			stream
 			with Portaudio.Error code -> (
-				Ev.notify(Ev.Error(Portaudio.string_of_error code));
-				
+				Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));
+
 				(* If the new device raise an error, we fallback to the previous device *)
 				if device <> mOutputDevice then
 					makeOutputStream file mOutputDevice
@@ -215,7 +221,7 @@ class c () = object (self)
 				AudioFile.setReadPercent file (Int64.to_int(Int64.div(Int64.mul file.newFrame
 					(Int64.of_int 100)) (Sndfile.frames stream)));
 					
-				Ev.notify(Ev.FileChanged file);
+				Ev.asyncNotify(Ev.FileChanged file);
 				true
 			)
 			else (
@@ -223,11 +229,11 @@ class c () = object (self)
 				file.newFrame <- Int64.zero;
 				file.curFrame <- Int64.zero;
 				(*file.readPercent <- 0;
-				Ev.notify(FileChanged file);*)
+				Ev.asyncNotify(FileChanged file);*)
 				false
 			)
 			with Portaudio.Error code -> (
-				Ev.notify(Ev.Error(Portaudio.string_of_error code));
+				Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));
 				false
 			)
 		in
@@ -250,18 +256,18 @@ class c () = object (self)
 						playFile file outputStream
 					else
 						(true, outputStream)
-				| State.Pause -> Ev.notify(Ev.PauseFile file); Mutex.lock mPauseLock;
-					Mutex.unlock mPauseLock; Ev.notify(Ev.StartFile file);
+				| State.Pause -> Ev.asyncNotify(Ev.PauseFile file); Mutex.lock mPauseLock;
+					Mutex.unlock mPauseLock; Ev.asyncNotify(Ev.StartFile file);
 					playFile file outputStream
-				| State.Stop -> Ev.notify(Ev.State mState); (false, outputStream)
+				| State.Stop -> Ev.asyncNotify(Ev.State mState); (false, outputStream)
 			)
 		in
 		let rec iterFiles prevFile outputStreamOpt = function
-			| [] -> Ev.notify(Ev.EndList prevFile); outputStreamOpt
+			| [] -> Ev.asyncNotify(Ev.EndList prevFile); outputStreamOpt
 			| file::tl -> (
-  			Ev.notify(Ev.StartFile file);
+  			Ev.asyncNotify(Ev.StartFile file);
   			match file.voice with
-  			| None -> Ev.notify(Ev.EndFile file); outputStreamOpt
+  			| None -> Ev.asyncNotify(Ev.EndFile file); outputStreamOpt
   			| Some talker -> (
   				
 					let os = defOutputStream file prevFile outputStreamOpt in
@@ -273,7 +279,7 @@ class c () = object (self)
   				
 					let (continu, outputStream) = playFile file os in
 					
-					Ev.notify(Ev.EndFile file);
+					Ev.asyncNotify(Ev.EndFile file);
 					
 					if continu then iterFiles file (Some outputStream) tl
 					else (Some outputStream)
@@ -289,10 +295,10 @@ class c () = object (self)
 			| Some stream -> Portaudio.close_stream stream
 		in
 		loop None;
-
-(*		with e -> Ev.notify(Ev.Error(Printexc.to_string e));
+(*
+		with e -> Ev.asyncNotify(Ev.Error(Printexc.to_string e));
 *)
-		self#threadSetState State.Stop;
+		setState State.Stop;
 		traceCyan"STOP";
 
 end

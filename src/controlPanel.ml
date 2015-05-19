@@ -58,8 +58,8 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 
 
 	(* observer methods *)
-	method notify =	function
-		| Ev.OutputDeviceChanged od -> self#update()
+	method update =	function
+		| Ev.OutputDeviceChanged od -> self#updateView()
 		| _ -> ()
 
 	
@@ -85,7 +85,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 			ctrl#restoreHiddenFile filePath
 
 
-	method update() =
+	method updateView() =
 
 		(* update hidden files tree view *)
 		let hiddenFilesModel = GTree.list_store hiddenFilesColumns in

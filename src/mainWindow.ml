@@ -55,7 +55,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 	method init() = ()
 
 (* observer methods *)
-	method notify =	function
+	method update =	function
 (*		| Ev.State s -> ()*)
 	| Ev.FileChanged file ->
 		gui#trackProgressbar#set_fraction(foi(AudioFile.readPercent file) /. 100.);
@@ -108,7 +108,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 		if gui#configurationHbox#misc#visible then
 			gui#configurationHbox#misc#hide()
 		else (
-			mControlPanel#update();
+			mControlPanel#updateView();
 			gui#configurationHbox#misc#show()
 		)
 		

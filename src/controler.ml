@@ -38,7 +38,6 @@ class c ?(filenameList = []) () = object (self)
 	initializer
 		Ev.addObserver (self :> Ev.observer);
 		mNodes <- [|mPlaylists.dnode; mFolders.dnode|];
-(*		mNodes <- [|mPlaylists|];*)
 		Configuration.addFiles filenameList;
 
 
@@ -54,7 +53,7 @@ class c ?(filenameList = []) () = object (self)
 
 		let outputDevice = Configuration.getOutputDevice
 		in
-		trace("outputDevice : "^outputDevice);
+
 		if L.mem outputDevice ~set:mPlayer#getOutputDevices then
 			mPlayer#changeOutputDevice outputDevice
 		else
@@ -75,7 +74,7 @@ class c ?(filenameList = []) () = object (self)
 		trace "Bye"
 
 (* observer methods *)
-	method notify =	function
+	method update =	function
 (*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
 		| Ev.StartFile f -> f.fnode.state <- mPlayMode;
 				L.iter(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
@@ -90,14 +89,15 @@ class c ?(filenameList = []) () = object (self)
 			| Repeat -> ()
 			| _ -> f.fnode.state <- Off*)
 		| Ev.EndList f -> (
-			match mPlayMode with
-			| Repeat -> ()
-			| Track -> (
-				match AudioFile.next f.fnode mNodes with
-				| Some nd -> self#changeFiles [nd]
-				| None -> self#changeFiles []
+				match mPlayMode with
+				| Repeat -> ()
+				| Track -> (
+					match AudioFile.next f.fnode mNodes with
+					| Some nd -> self#changeFiles [nd]
+					| None -> self#changeFiles []
+				)
+				| _ -> self#changeFiles []
 			)
-			| _ -> self#changeFiles [])
 		| Ev.OutputDeviceChanged od -> Configuration.setOutputDevice od
 		| _ -> ()
 

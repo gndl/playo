@@ -33,7 +33,7 @@ type notification =
 	Error of string
 
 class virtual observer () =	object
-	method virtual notify : notification -> unit
+	method virtual update : notification -> unit
 end
 
 
@@ -41,5 +41,20 @@ let observers : observer list ref = ref []
 
 let addObserver o = observers := o :: !observers
 
-let notify notif = L.iter(fun o -> o#notify notif) !observers
+let notify notif = L.iter(fun o -> o#update notif) !observers
+
+let asyncNotificationLock = Mutex.create()
+let asyncNotificationList : notification list ref = ref []
+
+let asyncNotify notif =
+	Mutex.lock asyncNotificationLock;
+	asyncNotificationList := notif::!asyncNotificationList;
+	Mutex.unlock asyncNotificationLock
+	
+let asyncUpdate() =
+	Mutex.lock asyncNotificationLock;
+	L.iter notify !asyncNotificationList;
+	asyncNotificationList := [];
+	Mutex.unlock asyncNotificationLock;
+	true
 
