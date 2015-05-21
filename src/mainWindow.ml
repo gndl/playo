@@ -19,7 +19,7 @@ open Usual
 open AudioFile
 open FilesModel
 
-module Ev = AppEvent
+module Ev = EventBus
 
 (*use "gui.ml";;*)
 

@@ -17,7 +17,7 @@
 open Usual
 open AudioFile
 
-module Ev = AppEvent
+module Ev = EventBus
 
 let maxA = 1.
 

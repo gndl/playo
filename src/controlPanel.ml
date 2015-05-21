@@ -16,7 +16,7 @@
 
 open Usual
 
-module Ev = AppEvent
+module Ev = EventBus
 
 let devicesColumns = new GTree.column_list
 let devicesNameColumn = devicesColumns#add Gobject.Data.string

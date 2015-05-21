@@ -17,7 +17,7 @@
 open Usual
 open AudioFile
 
-module Ev = AppEvent
+module Ev = EventBus
 
 type playlist = {label:string; files:string list}
 
