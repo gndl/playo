@@ -28,6 +28,7 @@ type notification =
 	SupFile of AudioFile.node |
 	NewPlaylist of string |
 	AddFolder |
+	HiddenFilesChanged |
 	Filter of string |
 	OutputDeviceChanged of string |
 	Error of string

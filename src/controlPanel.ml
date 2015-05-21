@@ -35,15 +35,17 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 		let txtRndrr = GTree.cell_renderer_text [] in
 
 		(* hidden files tree view *)
-		ignore(gui#hiddenFilesTreeview#append_column mAddCol);
+		let selection = gui#hiddenFilesTreeview#selection in
 
 		let pathCol = GTree.view_column ~title:"Path"
 									~renderer:(txtRndrr, ["text", hiddenFilesPathColumn]) ()
 		in
 		pathCol#set_resizable true;
 		ignore(gui#hiddenFilesTreeview#append_column pathCol);
-
-		ignore(gui#hiddenFilesTreeview#selection#connect#changed ~callback:self#onHiddenFilesSelectionChanged);
+(*		ignore(gui#hiddenFilesTreeview#append_column mAddCol);
+*)
+		selection#set_mode`SINGLE;
+		ignore(selection#connect#changed ~callback:self#onHiddenFilesSelectionChanged);
 
 		(* output devices tree view *)
 		let selection = gui#devicesTreeview#selection in
@@ -55,25 +57,17 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 
 		selection#set_mode`SINGLE;
 		ignore(selection#connect#changed ~callback:self#onDeviceSelectionChanged);
-
+		
+(*		self#update()
+*)
 
 	(* observer methods *)
 	method observe =	function
-		| Ev.OutputDeviceChanged od -> self#update()
+		| Ev.HiddenFilesChanged -> self#updateHiddenFiles()
+		| Ev.OutputDeviceChanged od -> self#updateOutputDevices()
 		| _ -> ()
 
 	
-	method onDeviceSelectionChanged() =
-		let model = gui#devicesTreeview#model in
-
-    match gui#devicesTreeview#selection#get_selected_rows with
-		| [] -> ()
-		| path::tl ->
-      let row = model#get_iter path in
-      let name = model#get ~row ~column:devicesNameColumn in
-			ctrl#changeOutputDevice name
-
-
 	method onHiddenFilesSelectionChanged() =
 		let model = gui#hiddenFilesTreeview#model in
 
@@ -85,11 +79,27 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 			ctrl#restoreHiddenFile filePath
 
 
-	method update() =
+	method onDeviceSelectionChanged() =
+		let model = gui#devicesTreeview#model in
 
+    match gui#devicesTreeview#selection#get_selected_rows with
+		| [] -> ()
+		| path::tl ->
+      let row = model#get_iter path in
+      let name = model#get ~row ~column:devicesNameColumn in
+			ctrl#changeOutputDevice name
+
+
+
+	method update() =
+		self#updateHiddenFiles();
+		self#updateOutputDevices();
+
+
+	method updateHiddenFiles() =
 		(* update hidden files tree view *)
+		let hiddenFiles = Configuration.getHiddenFiles() in
 		let hiddenFilesModel = GTree.list_store hiddenFilesColumns in
-		let hiddenFiles = Configuration.getExcludedFiles in
 
 		if L.length hiddenFiles > 0 then (
 
@@ -107,6 +117,10 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 			gui#hiddenFilesTreeview#misc#hide();
 		);
 
+		gui#hiddenFilesTreeview#set_model(Some (hiddenFilesModel#coerce));
+
+
+	method updateOutputDevices() =
 		(* update output devices tree view *)
 		let currDev = ctrl#getOutputDevice in
 		let devicesModel = GTree.list_store devicesColumns in

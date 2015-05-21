@@ -153,7 +153,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 			)
 		in
 		
-		L.iter addColumn (match Configuration.getColumns with
+		L.iter addColumn (match Configuration.getColumns() with
 			| [] -> Configuration.setColumns columns; columns
 			| l -> l);
 
@@ -223,10 +223,11 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 		mButtonPressed <- true;
 		let x = iof (GdkEvent.Button.x ev) in
 		let y = iof (GdkEvent.Button.y ev) in
-
+trace("buttonPressed x = "^soi x^", y = "^soi y);
 		match filesTreeview#get_path_at_pos ~x ~y with
 		| None -> false
 		| Some (path, col, colX, colY) -> (
+trace("buttonPressed colX = "^soi colX^", colY = "^soi colY);
 			let colId = col#get_sort_column_id in
 			
 			if mTimeCol#get_sort_column_id = colId then (

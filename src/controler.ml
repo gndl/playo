@@ -42,16 +42,16 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method init() =
-		mPlayer#setVolume Configuration.getVolume;
-		self#addFiles ~save:false Configuration.getFiles;
+		mPlayer#setVolume(Configuration.getVolume());
+		self#addFiles ~save:false (Configuration.getFiles());
 		
 		L.iter(fun (playlistName, files) -> self#newPlaylist playlistName;
 			L.iter(fun (fileName, filePath) ->
 				self#addNode(AudioFile.makeFile fileName filePath).fnode;
 			) files;
-		) Configuration.getPlaylists;
+		) (Configuration.getPlaylists());
 
-		let outputDevice = Configuration.getOutputDevice
+		let outputDevice = Configuration.getOutputDevice()
 		in
 
 		if L.mem outputDevice ~set:mPlayer#getOutputDevices then
@@ -116,7 +116,7 @@ class c ?(filenameList = []) () = object (self)
 		mPlayer#setVolume volumePercent;
 		Configuration.setVolume volumePercent;
 
-	method getVolume = Configuration.getVolume
+	method getVolume = Configuration.getVolume()
 
 		
 	method checkPropertys file =
@@ -145,7 +145,7 @@ class c ?(filenameList = []) () = object (self)
 
 	method addFiles ?(save = true) filenameList =
 		let ll = L.map(fun fn -> trace("add "^fn);
-			AudioFile.load fn Configuration.getExcludedFiles) filenameList
+			AudioFile.load fn (Configuration.getHiddenFiles())) filenameList
 		in
 		let children = A.of_list(L.flatten ll) in
 		AudioFile.addChildrenToDir children mFolders;
@@ -254,7 +254,10 @@ class c ?(filenameList = []) () = object (self)
 				if p == mFolders then Configuration.removeFile fullFileName
 				else (
 					match p.dnode.parent with
-					| Some pp -> if pp != mPlaylists then Configuration.addExcludedFile(fullFileName);
+					| Some pp -> if pp != mPlaylists then (
+						Configuration.addHiddenFile fullFileName;
+						Ev.notify(Ev.HiddenFilesChanged);
+					)
 					| None -> Configuration.removeFile fullFileName;
 				)
 			| None -> mNodes <- AudioFile.supNodeByIndex node.idx mNodes;
@@ -263,7 +266,10 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method restoreHiddenFile filePath =
-		Configuration.removeExcludedFile filePath
+		Configuration.removeHiddenFile filePath;
+		self#addFiles ~save:false [filePath];
+		Ev.notify(Ev.HiddenFilesChanged);
+
 
 
 	method getOutputDevice = mPlayer#getOutputDevice

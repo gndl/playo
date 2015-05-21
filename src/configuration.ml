@@ -30,7 +30,7 @@ let columns = new list_cp string_wrappers ~group ["player"; "columns"] [] "Displ
 let outputDevice = new string_cp ~group ["player"; "outputDevice"] "" "Player output device"
 
 let files = new list_cp string_wrappers ~group ["library"; "files"] [] "Audio files and folders of the library"
-let excluded = new list_cp string_wrappers ~group ["library"; "excluded"] [] "Audio files and folders excluded from the library"
+let hiddenFiles = new list_cp string_wrappers ~group ["library"; "hiddenFiles"] [] "Audio files and folders hidden in the library"
 
 let playlists = new list_cp (tuple2_wrappers string_wrappers (
 	list_wrappers (tuple2_wrappers string_wrappers string_wrappers)))
@@ -38,12 +38,11 @@ let playlists = new list_cp (tuple2_wrappers string_wrappers (
 
 
 (* Loading of the configuration file *)
-
 let log_file = open_out "playo.log";;
 group#read
   ~on_type_error:
   (fun groupable_cp raw_cp output filename in_channel ->
-     Printf.fprintf log_file
+			Printf.fprintf log_file
        "Type error while loading configuration parameter %s from file %s.\n%!"
        (S.concat "." groupable_cp#get_name) filename;
      output log_file; (* get more information into log_file *)
@@ -51,25 +50,41 @@ group#read
 	configFileName
 
 
-let getVolume = volume#get
+let getVolume() = volume#get
+
 let setVolume v = volume#set v
 
-let getColumns = columns#get
+
+let getColumns() = columns#get
+
 let setColumns cs = columns#set cs
 
-let getOutputDevice = outputDevice#get
+
+let getOutputDevice() = outputDevice#get
+
 let setOutputDevice v = outputDevice#set v
 
 
 let addFiles filenameList = files#set(files#get @ filenameList)
-let removeFile filename = files#set(L.filter(fun fn -> fn <> filename) files#get)
-let getFiles = files#get
 
-let addExcludedFile filename = excluded#set(filename :: excluded#get)
-let removeExcludedFile filename = excluded#set(L.filter(fun fn -> fn <> filename) excluded#get)
-let getExcludedFiles = excluded#get
+let removeFile filename = files#set(L.filter(fun fn -> fn <> filename) files#get)
+
+let getFiles() = files#get
+
+
+let addHiddenFile filename =
+	hiddenFiles#set(filename :: hiddenFiles#get)
+
+let removeHiddenFile filename =
+	hiddenFiles#set(L.filter ~f:(fun fn -> fn <> filename) hiddenFiles#get)
+
+let getHiddenFiles() = hiddenFiles#get
+
 
 let setPlaylists pls = playlists#set pls
-let getPlaylists = playlists#get
+
+let getPlaylists() = playlists#get
+
 
 let save() = group#write configFileName
+
