@@ -1,5 +1,5 @@
 # Playo
-A simple audio player in OCaml
+Simple audio player in OCaml
 
 
 Building and installing Playo
