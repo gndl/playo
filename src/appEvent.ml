@@ -43,18 +43,4 @@ let addObserver o = observers := o :: !observers
 
 let notify notif = L.iter(fun o -> o#update notif) !observers
 
-let asyncNotificationLock = Mutex.create()
-let asyncNotificationList : notification list ref = ref []
-
-let asyncNotify notif =
-	Mutex.lock asyncNotificationLock;
-	asyncNotificationList := notif::!asyncNotificationList;
-	Mutex.unlock asyncNotificationLock
-	
-let asyncUpdate() =
-	Mutex.lock asyncNotificationLock;
-	L.iter notify !asyncNotificationList;
-	asyncNotificationList := [];
-	Mutex.unlock asyncNotificationLock;
-	true
-
+let asyncNotify notif = GtkThread.async notify notif
