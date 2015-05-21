@@ -64,7 +64,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 	
 
 	initializer
-		Ev.addObserver (self :> Ev.observer);
+		Ev.addObserver self#observe;
 
 		filesTreeview#set_model(Some (filteredFilesModel :> GTree.model));
 		filesTreeview#set_headers_clickable true;
@@ -377,7 +377,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 
 	(* observer methods *)
-	method update =	function
+	method observe =	function
 		| Ev.StartFile f ->
 			let path = filesModel#custom_get_path f.fnode in
 			filesTreeview#expand_to_path path;

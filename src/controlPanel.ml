@@ -30,7 +30,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 								~renderer:(GTree.cell_renderer_pixbuf[`STOCK_ID "gtk-add"], []) ()
 
 	initializer
-		Ev.addObserver (self :> Ev.observer);
+		Ev.addObserver self#observe;
 
 		let txtRndrr = GTree.cell_renderer_text [] in
 
@@ -58,8 +58,8 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 
 
 	(* observer methods *)
-	method update =	function
-		| Ev.OutputDeviceChanged od -> self#updateView()
+	method observe =	function
+		| Ev.OutputDeviceChanged od -> self#update()
 		| _ -> ()
 
 	
@@ -85,7 +85,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 			ctrl#restoreHiddenFile filePath
 
 
-	method updateView() =
+	method update() =
 
 		(* update hidden files tree view *)
 		let hiddenFilesModel = GTree.list_store hiddenFilesColumns in
@@ -98,7 +98,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
   			hiddenFilesModel#set ~row ~column:hiddenFilesPathColumn filePath;
   		)
   			hiddenFiles;
-				
+
 			gui#hiddenFilesLabel#misc#show();
 			gui#hiddenFilesTreeview#misc#show();
 		)

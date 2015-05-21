@@ -32,15 +32,13 @@ type notification =
 	OutputDeviceChanged of string |
 	Error of string
 
-class virtual observer () =	object
-	method virtual update : notification -> unit
-end
 
-
-let observers : observer list ref = ref []
+let observers : (notification -> unit) list ref = ref []
 
 let addObserver o = observers := o :: !observers
 
-let notify notif = L.iter(fun o -> o#update notif) !observers
+let notify notification =
+	List.iter(fun observe -> observe notification) !observers
 
 let asyncNotify notif = GtkThread.async notify notif
+

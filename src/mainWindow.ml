@@ -29,7 +29,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 	val mControlPanel = new ControlPanel.c gui ctrl
 
 	initializer
-		Ev.addObserver (self :> Ev.observer);
+		Ev.addObserver self#observe;
 
 	  gui#bind ~name:"on_playButton_clicked" ~callback:self#play;
 	  gui#bind ~name:"on_searchEntry_changed" ~callback:self#filter;
@@ -55,7 +55,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 	method init() = ()
 
 (* observer methods *)
-	method update =	function
+	method observe =	function
 (*		| Ev.State s -> ()*)
 	| Ev.FileChanged file ->
 		gui#trackProgressbar#set_fraction(foi(AudioFile.readPercent file) /. 100.);
@@ -108,7 +108,7 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
 		if gui#configurationHbox#misc#visible then
 			gui#configurationHbox#misc#hide()
 		else (
-			mControlPanel#updateView();
+			mControlPanel#update();
 			gui#configurationHbox#misc#show()
 		)
 		

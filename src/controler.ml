@@ -36,7 +36,7 @@ class c ?(filenameList = []) () = object (self)
 
 
 	initializer
-		Ev.addObserver (self :> Ev.observer);
+		Ev.addObserver self#observe;
 		mNodes <- [|mPlaylists.dnode; mFolders.dnode|];
 		Configuration.addFiles filenameList;
 
@@ -74,7 +74,7 @@ class c ?(filenameList = []) () = object (self)
 		trace "Bye"
 
 (* observer methods *)
-	method update =	function
+	method observe =	function
 (*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
 		| Ev.StartFile f -> f.fnode.state <- mPlayMode;
 				L.iter(fun nd -> nd.state <- mPlayMode) mSelectedNodes;

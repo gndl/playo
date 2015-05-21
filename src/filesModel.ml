@@ -160,7 +160,7 @@ class c = object (self)
 
 
 	initializer
-		Ev.addObserver (self :> Ev.observer);
+		Ev.addObserver self#observe;
 
 	method updateNode node =
 		self#custom_row_changed (self#custom_get_path node) node
@@ -200,7 +200,7 @@ class c = object (self)
 
 
 (* observer methods *)
-	method update =	 function
+	method observe =	 function
 		| Ev.FileChanged file -> self#updateNode file.fnode
 		| Ev.NodeChanged nd -> self#updateNode nd
 		| Ev.AddFile nd ->
