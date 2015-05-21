@@ -37,7 +37,7 @@ let sizeColName = "Size"
 let pathColName = "Path"
 let supColName = "Sup"
 
-let columns = [addColName; nameColName; titleColName; artistColName; albumColName; genreColName; timeColName; sizeColName; pathColName; supColName]
+let columns = [addColName; nameColName; timeColName; supColName; titleColName; artistColName; albumColName; genreColName; sizeColName; pathColName]
 
 
 class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) toplevel =
