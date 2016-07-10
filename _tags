@@ -1,0 +1,37 @@
+# OASIS_START
+# DO NOT EDIT (digest: 50659378cb76db226ec81c12c2939afa)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Executable playo
+<src/*.ml{,i,y}>: oasis_executable_playo_ccopt
+"src/playo.byte": oasis_executable_playo_native
+<src/*.ml{,i,y}>: oasis_executable_playo_native
+"src/playo.byte": package(bigarray)
+"src/playo.byte": package(config-file)
+"src/playo.byte": package(gstreamer)
+"src/playo.byte": package(lablgtk2)
+"src/playo.byte": package(lablgtk2.glade)
+"src/playo.byte": package(str)
+"src/playo.byte": package(threads)
+"src/playo.byte": package(unix)
+<src/*.ml{,i,y}>: package(bigarray)
+<src/*.ml{,i,y}>: package(config-file)
+<src/*.ml{,i,y}>: package(gstreamer)
+<src/*.ml{,i,y}>: package(lablgtk2)
+<src/*.ml{,i,y}>: package(lablgtk2.glade)
+<src/*.ml{,i,y}>: package(str)
+<src/*.ml{,i,y}>: package(threads)
+<src/*.ml{,i,y}>: package(unix)
+# OASIS_STOP
