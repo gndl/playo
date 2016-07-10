@@ -344,7 +344,7 @@ trace("buttonPressed colX = "^soi colX^", colY = "^soi colY);
 		let path = model#get_path iter in
 		match filesModel#custom_get_iter path with
 		| Some {kind = File f} -> (
-			if ctrl#checkPropertys f then (
+			if ctrl#checkProperties f then (
 				prgRndrr#set_properties [
 					`VISIBLE true;
 					`VALUE f.readPercent;

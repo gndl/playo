@@ -70,13 +70,13 @@ let bg_df = "\x1b[49m";;		(* set background color to default (black) *)
 (*
 let trace s = ()
 *)
-let trace s = print_endline s;;
-let traceRed s = print_endline(fg_rd ^ s ^ fg_df);;
-let traceGreen s = print_endline(fg_gr ^ s ^ fg_df);;
-let traceBlue s = print_endline(fg_bl ^ s ^ fg_df);;
-let traceYellow s = print_endline(fg_yl ^ s ^ fg_df);;
-let traceMagenta s = print_endline(fg_mg ^ s ^ fg_df);;
-let traceCyan s = print_endline(fg_cy ^ s ^ fg_df);;
+let trace s = print_endline s
+let traceRed = Printf.printf "\x1b[31m%s\x1b[39m%!"
+let traceGreen = Printf.printf "\x1b[32m%s\x1b[39m\n%!"
+let traceBlue = Printf.printf "\x1b[34m%s\x1b[39m\n%!"
+let traceYellow = Printf.printf "\x1b[33m%s\x1b[39m\n%!"
+let traceMagenta = Printf.printf "\x1b[35m%s\x1b[39m\n%!"
+let traceCyan = Printf.printf "\x1b[36m%s\x1b[39m\n%!"
 
 (*
 let trace s = ()

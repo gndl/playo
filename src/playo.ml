@@ -16,7 +16,7 @@
 
 open Usual
 
-let _ =
+let () =
 	try
 	let fl = A.fold_left ~f:(fun fl f -> if Sys.file_exists f then f::fl else fl)
 			~init:[] (A.sub Sys.argv 1 (A.length Sys.argv - 1))

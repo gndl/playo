@@ -61,7 +61,7 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method release() =
-		AudioFile.close mNodes;
+		AudioFile.closeList mNodes;
 		
 		Configuration.setPlaylists(A.fold_right ~f:(fun pl pls ->
 			match pl.kind with
@@ -119,8 +119,8 @@ class c ?(filenameList = []) () = object (self)
 	method getVolume = Configuration.getVolume()
 
 		
-	method checkPropertys file =
-		try AudioFile.checkPropertys file
+	method checkProperties file =
+		try AudioFile.checkProperties file
 		with Unix.Unix_error(e, f, p) -> (
 			let msg = (Unix.error_message e)^" ("^f^" "^p^")" in
 			Ev.notify(Ev.Error msg);
@@ -129,18 +129,13 @@ class c ?(filenameList = []) () = object (self)
 
 
 	method checkVoice file =
+		self#checkProperties file
 (*
-		self#checkPropertys file
 *)
-		if self#checkPropertys file then (
-			try
-				let _ = AudioFile.stream file in true
-			with Sndfile.Error(e, msg) -> (
-				Ev.notify(Ev.Error msg);
-				false
-			)
-		) else false
 (*
+		if self#checkProperties file then (
+			let _ = AudioFile.stream file in true
+		) else false
 *)
 
 	method addFiles ?(save = true) filenameList =
@@ -186,21 +181,7 @@ class c ?(filenameList = []) () = object (self)
 		)
 
 
-	method setFilePosition file posPer10k =
-
-		let nbFrame = match file.voice with
-			| Some tkr -> Sndfile.frames tkr.stream
-			| None -> 
-				let stream = Sndfile.openfile (file.fnode.path^file.fnode.name) in
-				let nf = Sndfile.frames stream in Sndfile.close stream; nf
-		in
-		let adjustedPosPer10k = if posPer10k < 0 then 0 else
-							 if posPer10k > 9999 then 9999 else posPer10k in
-		let posRate = Int64.of_int adjustedPosPer10k
-		in
-		file.newFrame <- Int64.div(Int64.mul nbFrame posRate) (Int64.of_int 10000);
-		file.readPercent <- adjustedPosPer10k / 100;
-
+	method setFilePosition file posPer10k = AudioFile.setPosition file posPer10k
 
 	method openPlaylist playlistName = trace playlistName
 	method savePlaylist() = ()
