@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: d931bdc502af27b41ec15c9b1658293e) *)
+(* DO NOT EDIT (digest: 940ea176304e312e0ee7f6598bddac18) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -773,6 +773,8 @@ let package_default =
        [
           (["oasis_executable_playo_ccopt"; "compile"],
             [(OASISExpr.EBool true, S [A "-ccopt"; A "-O3"])]);
+          (["oasis_executable_playo_byte"; "ocaml"; "link"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])]);
           (["oasis_executable_playo_native"; "ocaml"; "link"; "native"],
             [
                (OASISExpr.EBool true,
@@ -785,6 +787,8 @@ let package_default =
                       A "-noassert"
                    ])
             ]);
+          (["oasis_executable_playo_byte"; "ocaml"; "ocamldep"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])]);
           (["oasis_executable_playo_native"; "ocaml"; "ocamldep"; "native"],
             [
                (OASISExpr.EBool true,
@@ -797,6 +801,8 @@ let package_default =
                       A "-noassert"
                    ])
             ]);
+          (["oasis_executable_playo_byte"; "ocaml"; "compile"; "byte"],
+            [(OASISExpr.EBool true, S [A "-g"])]);
           (["oasis_executable_playo_native"; "ocaml"; "compile"; "native"],
             [
                (OASISExpr.EBool true,
@@ -818,6 +824,6 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 822 "myocamlbuild.ml"
+# 828 "myocamlbuild.ml"
 (* OASIS_STOP *)
 Ocamlbuild_plugin.dispatch dispatch_default;;

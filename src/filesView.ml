@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaetan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -15,7 +15,7 @@
  *)
 
 open Usual
-open StdLabels
+(*open StdLabels*)
 open AudioFile
 open FilesModel
 
@@ -175,7 +175,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 *)
 		filteredFilesModel#set_visible_func(fun model treeIter ->
 			
-			if S.length mFilterMotif = 0 then true
+			if String.length mFilterMotif = 0 then true
 			else (
     		let path = model#get_path treeIter in
     		match filesModel#custom_get_iter path with
@@ -197,7 +197,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 	method setFilterMotif v =
 		mFilterMotif <- v;
-		mFilterRegexp <- Str.regexp(S.lowercase v);
+		mFilterRegexp <- Str.regexp(String.lowercase_ascii v);
 		filesModel#filter mFilterRegexp;
 		filteredFilesModel#refilter()
 

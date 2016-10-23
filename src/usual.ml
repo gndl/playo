@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaï¿½tan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -16,7 +16,6 @@
 
 module A = ArrayLabels
 module L = ListLabels
-module S = String
 
 let appName = "Playo"
 
@@ -36,7 +35,7 @@ let ios s = int_of_string s;;
 let sof f = string_of_float f;;
 let fos s = float_of_string s;;
 let sob b = string_of_bool b;;
-let soc c = S.make 1 c;;
+let soc c = String.make 1 c;;
 
 let foi i = float_of_int i;;
 let iof f = int_of_float f;;
@@ -73,7 +72,7 @@ let trace s = ()
 let trace s = print_endline s
 let traceRed = Printf.printf "\x1b[31m%s\x1b[39m%!"
 let traceGreen = Printf.printf "\x1b[32m%s\x1b[39m\n%!"
-let traceBlue = Printf.printf "\x1b[34m%s\x1b[39m\n%!"
+let traceBlue il = Printf.printf "\x1b[34m%s\x1b[39m\n%!"(String.concat "" il)
 let traceYellow = Printf.printf "\x1b[33m%s\x1b[39m\n%!"
 let traceMagenta = Printf.printf "\x1b[35m%s\x1b[39m\n%!"
 let traceCyan = Printf.printf "\x1b[36m%s\x1b[39m\n%!"
@@ -89,9 +88,9 @@ let default d = function
 
 let splitFilename filename =
 	try
-	let p = 1 + S.rindex filename '/' in
-	(S.sub filename 0 p,
-	 S.sub filename p (S.length filename - p))
+	let p = 1 + String.rindex filename '/' in
+	(String.sub filename 0 p,
+	 String.sub filename p (String.length filename - p))
 	with Not_found -> ("", filename)
 
 

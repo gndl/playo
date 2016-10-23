@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaï¿½tan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -129,8 +129,8 @@ class c () = object (self)
 
 	
 	method private run() =
-(*		try
-*)
+		try
+(**)
 		let setState s =
 			if mState <> s then (
 				mState <- s;
@@ -142,18 +142,19 @@ class c () = object (self)
 		
 		setState State.Play;
 
-    let timeout = Int64.of_int 100_000_000 in
-    let filter = Gst.Message.[End_of_stream; Error] in
-
 		let playChunk file stream =
-
+(*
 			if file.newPosition <> file.currentPosition then (
         Gst.Element.seek_simple stream Gst.Format.Time [] file.newPosition;
 				file.currentPosition <- file.newPosition;
 			);
+*)
+    let timeout = Int64.of_int 80_000_000 in
+    let filter = Gst.Message.[End_of_stream; Error] in
 
       match Gst.Bus.(timed_pop_filtered (of_element stream) ~timeout filter) with
       | exception Gst.Timeout -> (
+		  (*
         file.newPosition <- Gst.(Element.position stream Format.Time);
 				file.currentPosition <- file.newPosition;
 
@@ -161,14 +162,18 @@ class c () = object (self)
           Int64.(to_int(div(mul file.newPosition (of_int 100)) file.duration));
 
 				Ev.asyncNotify(Ev.FileChanged file);
-				true
+			*)	true
 			)
-      | _ -> false
+      | msg -> (
+		  match Gst.Message.message_type msg with
+		  | End_of_stream -> false
+          | _ -> true
+	  )
 		in
 		let rec playFile file stream =
 
 			if mChangeFiles then (
-        Gst.Element.(set_state stream State_paused) |> ignore;
+        Gst.Element.(set_state stream State_paused) |> Log.stateChange;
         (*AudioFile.close file;*)
 				mChangeFiles <- false;
 				false
@@ -181,14 +186,14 @@ class c () = object (self)
 					else
 						true
 				| State.Pause ->
-          Gst.Element.(set_state stream State_paused) |> ignore;
+          Gst.Element.(set_state stream State_paused) |> Log.stateChange;
           Ev.asyncNotify(Ev.PauseFile file);
           Mutex.(lock mPauseLock; unlock mPauseLock);
-          Gst.Element.(set_state stream State_playing) |> ignore;
+          Gst.Element.(set_state stream State_playing) |> Log.stateChange;
           Ev.asyncNotify(Ev.StartFile file);
 					playFile file stream
 				| State.Stop ->
-          Gst.Element.(set_state stream State_paused) |> ignore;
+          Gst.Element.(set_state stream State_paused) |> Log.stateChange;
           Ev.asyncNotify(Ev.State mState); false
 			)
 		in
@@ -196,7 +201,8 @@ class c () = object (self)
 			| [] -> Ev.asyncNotify(Ev.EndList prevFile);
 			| file::tl -> (
         let stream = AudioFile.stream file in
-        Gst.Element.(set_state stream State_playing) |> ignore;
+        Gst.Element.(set_state stream State_playing) |> Log.stateChange;
+        Gst.Element.(get_state stream) |> Log.states;
 
         Ev.asyncNotify(Ev.StartFile file);
 				
@@ -215,11 +221,15 @@ class c () = object (self)
   		)
 		in
 		loop ();
-(*
-		with e -> Ev.asyncNotify(Ev.Error(Printexc.to_string e));
-*)
+
 		setState State.Stop;
 		traceCyan"STOP";
+		with e -> (
+		traceMagenta(Printexc.to_string e);
+		traceYellow(Printexc.get_backtrace());
+		Printexc.record_backtrace true;
+		Ev.asyncNotify(Ev.Error(Printexc.to_string e));
+	)
 
 end
 

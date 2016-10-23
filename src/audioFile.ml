@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaï¿½tan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -109,6 +109,22 @@ let unexistentDir = {dnode = unexistentNode; children = [||]}
 let hasInfo f = f.title <> uk || f.artist <> uk || f.album <> uk || f.genre <> uk
 let hasId f = f.title <> uk || f.artist <> uk || f.album <> uk
 
+let stream file =
+	match file.voice with
+	| None -> (
+	let readPipelineStatement = Printf.sprintf
+		"filesrc location=\"%s\" ! decodebin ! audioconvert ! audioresample ! autoaudiosink"
+		(filename file)
+	in
+(*  	traceCyan readPipelineStatement;*)
+	  let stream = Pipeline.parse_launch readPipelineStatement in
+
+		file.voice <- Some stream;
+		stream
+	)
+	| Some stream -> stream
+
+
 let secondesToTime secondes =
 	let h = secondes / 3600 in
 	let m = secondes / 60 - h * 60 in
@@ -152,15 +168,17 @@ let size filename =
 
 let checkProperties file =
 	
-	if file.duration <> Int64.zero then true
+	if file.duration <> Int64.zero || file.duration = Int64.zero then true
 	else (
     let fileName = filename file in
     let pipeline = Printf.sprintf "filesrc location=\"%s\" ! decodebin ! fakesink" fileName in
     let bin = Pipeline.parse_launch pipeline in
-
-   Element.set_state bin Element.State_paused |> ignore;
+		(*
+	let bin = stream file in
+*)
+   Element.set_state bin Element.State_paused |> Log.stateChange;
 (*		file.fnode.size <- size fileName;*)
-  Element.get_state bin |> ignore;
+  Element.get_state bin |> Log.states;
 
   file.duration <- Element.duration bin Format.Time;
   file.fnode.time <- timeToHMS file.duration;
@@ -173,6 +191,7 @@ let checkProperties file =
       
 				  L.iter (fun (l,v) ->
 					let vs = String.concat ", " v in
+					traceBlue[l; " : "; vs];
 					match l with
 				| "artist" -> file.artist <- vs
     		| "album" -> file.album <- vs
@@ -182,7 +201,7 @@ let checkProperties file =
 					) tags
 		)
 		in
-   Element.set_state bin Element.State_null |> ignore;
+   Element.set_state bin Element.State_null |> Log.stateChange;
   		true
 		)
 
@@ -207,26 +226,9 @@ let setPosition file posPer10k =
 		file.newPosition <- Int64.(div(mul file.duration posPer10k) (of_int 10000))
 
 
-let stream file =
-	match file.voice with
-	| None -> (
-	let readPipelineStatement = Printf.sprintf
-		"filesrc location=\"%s\" ! decodebin ! audioconvert ! audioresample ! autoaudiosink"
-		(filename file)
-	in
-  	traceCyan readPipelineStatement;
-	  let pipeline = Pipeline.parse_launch readPipelineStatement in
-	  traceCyan "launched";
-
-		file.voice <- Some pipeline;
-		pipeline
-	)
-	| Some stream -> stream
-
-
 let stop file =
   match file.voice with
-	| Some pipeline -> Element.set_state pipeline Element.State_null |> ignore;
+	| Some pipeline -> Element.(set_state pipeline State_null) |> Log.stateChange;
 	| None -> ()
 
 
@@ -238,8 +240,8 @@ let close file =
 let addIfAudioFile filename l =
 	try
 	let (path, name) = splitFilename filename in
-	let p = S.rindex name '.' in
-	let ext = S.sub name p (S.length name - p) in
+	let p = String.rindex name '.' in
+	let ext = String.sub name p (String.length name - p) in
 	if L.mem ext audio_ext then (
 		let fnode = makeNode name path in
 		let f = {title = uk; artist = uk; album = uk; genre = uk; fnode;
@@ -268,15 +270,15 @@ let load filename excludedFiles =
 			if fn.[0] = '.' then l else check (dirname^"/"^fn) l) ~init:[] sons) with
 			| [] -> l
 			| cl -> let children = A.of_list cl in
-				A.fast_sort(fun n1 n2 -> S.compare n1.name n2.name) children;
+				A.fast_sort(fun n1 n2 -> String.compare n1.name n2.name) children;
 				let (path, name) = splitFilename dirname in
 				let dnode = makeNode name path ~size:(soi(A.length children)) in
 				let dir = {dnode; children} in dnode.kind <- Dir dir;
 				A.iteri(fun i nd -> nd.idx <- i; nd.parent <- Some dir) children;
 				dnode::l
 	in
-	let e = S.length filename - 1 in
-	let filename = if filename.[e] = '/' then S.sub filename 0 e
+	let e = String.length filename - 1 in
+	let filename = if filename.[e] = '/' then String.sub filename 0 e
 								 else filename in
 	if Sys.file_exists filename then check filename [] else []
 
@@ -405,8 +407,8 @@ let loadnode filename =
 let isAudioFile filename =
 	if filename.[0] = '.' then false else (
 		try
-		let p = S.rindex filename '.' in
-		let ext = S.sub filename p (S.length filename - p) in
+		let p = String.rindex filename '.' in
+		let ext = String.sub filename p (String.length filename - p) in
 	
 		if L.mem ext audio_ext then true else false
 	
@@ -427,8 +429,8 @@ let loadt filename =
 		let cl = A.fold_left(fun l fn -> if fn.[0] = '.' then l else fn::l) [] ca
 		in
 		let (dl, fl) = L.partition(fun n -> Sys.is_directory n) cl in
-		let dl = L.fast_sort S.compare dl in
-		let fl = L.fast_sort S.compare fl in
+		let dl = L.fast_sort String.compare dl in
+		let fl = L.fast_sort String.compare fl in
 		let ca = A.of_list cl in
 		let da = A.init
 

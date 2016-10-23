@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaï¿½tan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -22,9 +22,9 @@ let all_files () =
   f
 
 let is_string_prefix s1 s2 =
-  let l1 = S.length s1 in
-  let l2 = S.length s2 in
-  l1 <= l2 && s1 = S.sub s2 0 l1
+  let l1 = String.length s1 in
+  let l2 = String.length s2 in
+  l1 <= l2 && s1 = String.sub s2 0 l1
 
 let image_filter () =
   let f = GFile.filter ~name:"Images" () in

@@ -1,5 +1,5 @@
 (* 
- * Copyright (C) 2015 Gaëtan Dubreil
+ * Copyright (C) 2015 Gaï¿½tan Dubreil
  *
  *  All rights reserved.This file is distributed under the terms of the
  *  GNU General Public License version 3.0.
@@ -44,7 +44,7 @@ group#read
   (fun groupable_cp raw_cp output filename in_channel ->
 			Printf.fprintf log_file
        "Type error while loading configuration parameter %s from file %s.\n%!"
-       (S.concat "." groupable_cp#get_name) filename;
+       (String.concat "." groupable_cp#get_name) filename;
      output log_file; (* get more information into log_file *)
   )
 	configFileName
