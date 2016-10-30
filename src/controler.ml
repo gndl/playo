@@ -24,7 +24,7 @@ type playlist = {label:string; files:string list}
 
 class c ?(filenameList = []) () = object (self)
 
-	val mPlayer = Player.make
+	val mPlayer = Player.make()
 	val mutable mPlayMode = AudioFile.Single
 	val mPlaylists = AudioFile.makeDir "Playlists"
 	val mFolders = AudioFile.makeDir ~idx:1 "Folders"
@@ -135,8 +135,8 @@ class c ?(filenameList = []) () = object (self)
 		if self#checkPropertys file then (
 			try
 				let _ = AudioFile.stream file in true
-			with Sndfile.Error(e, msg) -> (
-				Ev.notify(Ev.Error msg);
+   with e(*Sndfile.Error(e, msg)*) -> (
+				Ev.notify(Ev.Error "Error");
 				false
 			)
 		) else false
@@ -188,17 +188,17 @@ class c ?(filenameList = []) () = object (self)
 
 	method setFilePosition file posPer10k =
 
-		let nbFrame = match file.voice with
+		let nbFrame = Int64.of_int 1000(*match file.voice with
 			| Some tkr -> Sndfile.frames tkr.stream
 			| None -> 
 				let stream = Sndfile.openfile (file.fnode.path^file.fnode.name) in
-				let nf = Sndfile.frames stream in Sndfile.close stream; nf
+		     let nf = Sndfile.frames stream in Sndfile.close stream; nf*)
 		in
 		let adjustedPosPer10k = if posPer10k < 0 then 0 else
 							 if posPer10k > 9999 then 9999 else posPer10k in
 		let posRate = Int64.of_int adjustedPosPer10k
 		in
-		file.newFrame <- Int64.div(Int64.mul nbFrame posRate) (Int64.of_int 10000);
+		file.newFrame <- Int64.(div(mul nbFrame posRate) (of_int 10000));
 		file.readPercent <- adjustedPosPer10k / 100;
 
 

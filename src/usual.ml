@@ -37,6 +37,7 @@ let sof f = string_of_float f;;
 let fos s = float_of_string s;;
 let sob b = string_of_bool b;;
 let soc c = S.make 1 c;;
+let sol l = S.concat "" l
 
 let foi i = float_of_int i;;
 let iof f = int_of_float f;;
@@ -81,7 +82,8 @@ let traceCyan s = print_endline(fg_cy ^ s ^ fg_df);;
 (*
 let trace s = ()
 *)
-
+let log msg = print_endline(sol msg);;
+    
 let default d = function
   | None -> d
   | Some v -> v

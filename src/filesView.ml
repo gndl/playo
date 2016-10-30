@@ -197,7 +197,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 
 	method setFilterMotif v =
 		mFilterMotif <- v;
-		mFilterRegexp <- Str.regexp(S.lowercase v);
+		mFilterRegexp <- Str.regexp(S.lowercase_ascii v);
 		filesModel#filter mFilterRegexp;
 		filteredFilesModel#refilter()
 
