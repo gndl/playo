@@ -19,14 +19,14 @@ open Usual
 open FFmpeg
 open Avutil
 
-module Resampler = Swresample.Make (Swresample.Frame) (Swresample.DblBigArray)
+module Resampler = Swresample.Make (Swresample.Frame) (Swresample.FltBigArray)
 
 
-let audio_ext = [ ".wav"; ".ogg"; ".flac"; ".pls"](*; ".m3u"*)
+let audio_ext = [ ".wav"; ".ogg"; ".flac"; ".mp3"; ".pls"](*; ".m3u"*)
 let audio_ext_pattern = L.map(fun ext -> "*"^ext) audio_ext
 
 let uk = ""
-let defRate = 44100
+let defRate = Int64.of_int 44100
 
 type state = Single | Repeat | Track | Random | Pause | Off
 
@@ -39,11 +39,13 @@ type t = {
   mutable album : string;
   mutable genre : string;
   fnode : node;
-  mutable curFrame : Int64.t;
-  mutable newFrame : Int64.t;
+  mutable duration : Int64.t;
+  mutable curPosition : Int64.t;
+  mutable newPosition : Int64.t;
   mutable readPercent : int;
-  mutable rate : int;
+  mutable rate : Int64.t;
   mutable channels : int;
+  mutable streamIndex : int;
   mutable voice : talker option
 }
 and node = {
@@ -68,11 +70,13 @@ let artist file = file.artist
 let album file = file.album
 let genre file = file.genre
 let node file = file.fnode
-let currentFrame file = file.curFrame
-let newFrame file = file.newFrame
+let duration file = file.duration
+let currentPosition file = file.curPosition
+let newPosition file = file.newPosition
 let readPercent file = file.readPercent
-let rate file = file.rate
+let rate file = Int64.to_int file.rate
 let channels file = file.channels
+let streamIndex file = file.streamIndex
 let voice file = file.voice
 let name file = file.fnode.name
 let path file = file.fnode.path
@@ -98,12 +102,14 @@ let makeDir ?(path = "") ?(idx = 0) ?(children = [||]) ?(parent = None) ?(state 
 
 let makeFile ?(idx = 0) ?(parent = None) ?(state = Off) ?(time = uk)
     ?(title = uk) ?(artist = uk) ?(album = uk) ?(genre = uk) ?(voice = None)
-    ?(rate = 1) ?(channels = 1) ?(size = uk) name path =
+    ?(rate = Int64.zero) ?(channels = 1) ?(streamIndex = -1) ?(size = uk) name path =
 
   let fnode = {name; path; time; size; kind = Null; idx; parent; state; visible = true}
   in
-  let file = {title; artist; album; genre; fnode; curFrame = Int64.zero;
-	      newFrame = Int64.zero; readPercent = 0; rate; channels; voice}
+  let file = {title; artist; album; genre; fnode;
+              duration = Int64.zero; curPosition = Int64.zero; newPosition = Int64.zero;
+              readPercent = 0; rate;
+              channels; streamIndex; voice}
   in
   fnode.kind <- File file; file
 
@@ -111,22 +117,29 @@ let makeFile ?(idx = 0) ?(parent = None) ?(state = Off) ?(time = uk)
 
 let unexistentNode = {name = uk; path = uk; time = uk; size = uk; kind = Null; idx = -1; parent = None; state = Off; visible = false}
 let unexistentFile = {title = uk; artist = uk; album = uk; genre = uk;
-	              fnode = unexistentNode; curFrame = Int64.zero; newFrame = Int64.zero; readPercent = 0; rate = defRate; channels = 1; voice = None}
+                      fnode = unexistentNode;
+                      duration = Int64.zero;
+                      curPosition = Int64.zero; newPosition = Int64.zero;
+                      readPercent = 0; rate = defRate; channels = 1;
+                      streamIndex = -1; voice = None}
 let unexistentDir = {dnode = unexistentNode; children = [||]}
 (*let unexistent = Dir unexistentDir*)
 
 let hasInfo f = f.title <> uk || f.artist <> uk || f.album <> uk || f.genre <> uk
 let hasId f = f.title <> uk || f.artist <> uk || f.album <> uk
 
-let secondesToTime secondes =
-  let h = secondes / 3600 in
-  let m = secondes / 60 - h * 60 in
-  let s = secondes - m * 60 - h * 3600 in
+let secondFractions = Int64.of_int 1_000_000_000
+let hundred = Int64.of_int 100
+
+let secondsToTime seconds =
+  let h = seconds / 3600 in
+  let m = seconds / 60 - h * 60 in
+  let s = seconds - m * 60 - h * 3600 in
   if h > 0 then Printf.sprintf " %d:%02d:%02d " h m s
   else Printf.sprintf " %d:%02d " m s
 
-let framesSamplerateToTime frames samplerate =
-  secondesToTime(Int64.to_int(Int64.div frames (Int64.of_int samplerate)))
+let samplesToTime samples samplerate =
+  secondsToTime(Int64.(to_int(div samples samplerate)))
 
 
 let size filename =
@@ -141,7 +154,7 @@ let size filename =
 
 let checkPropertys file =
 
-  if file.rate > 1 then true
+  if file.rate > Int64.zero then true
   else (
     let filename = filename file in
 
@@ -149,10 +162,12 @@ let checkPropertys file =
     try
       let stream = Av.open_input filename in
       file.channels <- Av.get_nb_channels stream;
-      file.rate <- Av.get_sample_rate stream;
-      (* TODO
-         file.fnode.time <- Av.get_audio_duration stream;
-      *)
+      file.rate <- Int64.of_int(Av.get_sample_rate stream);
+      file.streamIndex <- Av.get_audio_stream_index stream;
+      let dur = Av.get_duration stream file.streamIndex Time_format.Nanosecond in
+      file.duration <- Int64.(div(mul dur file.rate) secondFractions);
+      file.fnode.time <- samplesToTime file.duration file.rate;
+
       Av.get_metadata stream |> List.iter(fun(k, v) ->
           let tag = String.lowercase_ascii k in
 
@@ -167,14 +182,10 @@ let checkPropertys file =
 
 
 let progress file =
-  if file.newFrame > Int64.zero then
-    (framesSamplerateToTime file.newFrame file.rate) ^ " / " ^ file.fnode.time
+  if file.newPosition > Int64.zero then
+    (samplesToTime file.newPosition file.rate) ^ " / " ^ file.fnode.time
   else file.fnode.time
 
-
-let setReadPercent file readPercent =
-  file.curFrame <- file.newFrame;
-  file.readPercent <- readPercent
 
 
 let talker file =
@@ -195,16 +206,50 @@ let talker file =
 let stream file = (talker file).stream
 
 
+let checkSeek file =
+
+  if file.newPosition <> file.curPosition then (
+    let p = Int64.(div(mul file.newPosition secondFractions) file.rate) in
+    Av.seek_frame(stream file) file.streamIndex Time_format.Nanosecond p [||];
+    file.curPosition <- file.newPosition;
+    traceMagenta"Seek !";
+    true
+  )
+  else false
+
+
+let addToPosition file samples =
+
+  if not (checkSeek file) then (
+    file.newPosition <- Int64.(add file.curPosition (of_int samples));
+    file.curPosition <- file.newPosition;
+  );
+
+  file.readPercent <- Int64.(to_int(div(mul file.newPosition hundred) file.duration))
+
+
+let setPositionPer10k file pos = Int64.(
+  file.newPosition <- div(mul file.duration (of_int pos)) (of_int 10000);
+  file.readPercent <- pos / 100
+)
+    
+  
+let resetPosition file =
+  file.newPosition <- Int64.zero;
+  file.curPosition <- Int64.zero
+
+
 let addIfAudioFile filename l =
   try
     let (path, name) = splitFilename filename in
     let p = S.rindex name '.' in
     let ext = S.sub name p (S.length name - p) in
-    if L.mem ext audio_ext then (
+    if true || L.mem ext audio_ext then (
       let fnode = makeNode name path in
       let f = {title = uk; artist = uk; album = uk; genre = uk; fnode;
-	       curFrame = Int64.zero; newFrame = Int64.zero; readPercent = 0;
-	       rate = 1; channels = 1; voice = None}
+               duration = Int64.zero;
+               curPosition = Int64.zero; newPosition = Int64.zero; readPercent = 0;
+	       rate = Int64.zero; channels = 1; streamIndex = -1; voice = None}
       in fnode.kind <- File f;
       fnode::l)
     else l
@@ -329,7 +374,7 @@ let copy node =
 let close lst =
   iterFiles(fun f ->
       match f.voice with
-      | Some talker -> (*Sndfile.close talker.stream;*) f.voice <- None
+      | Some talker -> f.voice <- None
       | None -> ()) lst
 
 (*

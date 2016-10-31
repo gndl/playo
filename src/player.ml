@@ -139,13 +139,13 @@ class c () = object (self)
 
     setState State.Play;
 
-    let bufLen = 44100 in
+    let bufLen = 10000 in
 
     let rec makeOutputStream file device =
       try
   	let rate = foi(AudioFile.rate file) in
 	let channels = AudioFile.channels file in
-   let bufframes = bufLen / channels in
+        let bufframes = bufLen / channels in
 
   	let outparam = Portaudio.{
   	    channels;
@@ -181,8 +181,8 @@ class c () = object (self)
       | None -> makeOutputStream file mNewOutputDevice
       | Some stream ->
 	if mNewOutputDevice <> mOutputDevice
-	                        || (AudioFile.rate file) <> (AudioFile.rate prevFile)
-	                        || (AudioFile.channels file) <> (AudioFile.channels prevFile)
+	|| (AudioFile.rate file) <> (AudioFile.rate prevFile)
+	|| (AudioFile.channels file) <> (AudioFile.channels prevFile)
 	then (
 	  Portaudio.close_stream stream;
 	  makeOutputStream file mNewOutputDevice
@@ -191,13 +191,13 @@ class c () = object (self)
     in
 
     let open Bigarray in
+    (*
     let outBuf = Array1.create float32 c_layout bufLen in
     let genOutBuf = genarray_of_array1 outBuf in
     let outBufPos = ref 0 in
-    (*
   let sin = Array.init bufLen (fun t -> sin(float_of_int t *. 2. *. pi *. 110. /. 44100.)) in
-	  for i = 0 to bufLen - 1 do
-	    outBuf.{i} <- sin.(i) *. mVolume;
+for i = 0 to bufLen - 1 do
+outBuf.{i} <- sin.(i) *. mVolume;
           done;
 *)
     let playChunk file outStream =
@@ -209,28 +209,28 @@ class c () = object (self)
       | Av.Audio af -> (
           let buffer = Resampler.convert talker.resampler af in
           let readCount = Array1.dim buffer in
+          let samplesPerChannel = readCount / channels in
+
+	  for i = 0 to readCount - 1 do
+	    buffer.{i} <- buffer.{i} *. mVolume;
+          done;
+
+          let genOutBuf = genarray_of_array1 buffer in
 
           let continu = try
+              (*
               if !outBufPos + readCount > bufLen then (
                 let samplesPerChannel = !outBufPos / channels in
                 outBufPos := 0;
+*)
        	        Portaudio.write_stream_ba outStream genOutBuf 0 samplesPerChannel;
 
-	        if file.newFrame = file.curFrame then (
-	          let framesRead = Int64.of_int samplesPerChannel in
-	          file.newFrame <- Int64.add file.curFrame framesRead;
-	        )
-	        else (
-                  (*					let offset = Int64.sub file.newFrame file.curFrame in
-	            file.newFrame <- Sndfile.seek stream offset Sndfile.SEEK_CUR;*)
-                  (*	      ignore(Sndfile.seek stream file.newFrame Sndfile.SEEK_SET);*)
-	        );
-(*
-AudioFile.setReadPercent file Int64.(to_int(div(mul file.newFrame
-(of_int 100)) (Sndfile.frames stream)));
-*)
+                AudioFile.addToPosition file samplesPerChannel;
+
 	        Ev.asyncNotify(Ev.FileChanged file);
+                (*
               );
+*)
               true
             with Portaudio.Error code -> (
 	        if code = errorCodeOutputUnderflowed then (
@@ -242,20 +242,16 @@ AudioFile.setReadPercent file Int64.(to_int(div(mul file.newFrame
 	          Ev.asyncNotify(Ev.Error msg); false
 	        )
 	      )
-          in
+          in(*
 	  for i = 0 to readCount - 1 do
 	    outBuf.{!outBufPos + i} <- buffer.{i} *. mVolume;
           done;
           outBufPos := !outBufPos + readCount;
-
+          *)
 	  continu
 	)
       | Av.End_of_file -> (
-          (*	    ignore(Sndfile.seek stream Int64.zero Sndfile.SEEK_SET);*)
-	  file.newFrame <- Int64.zero;
-	  file.curFrame <- Int64.zero;
-	  (*file.readPercent <- 0;
-	    Ev.asyncNotify(FileChanged file);*)
+          AudioFile.resetPosition file;
 	  false
 	)
       | exception Avutil.Failure msg -> Ev.asyncNotify(Ev.Error msg); false
@@ -269,7 +265,6 @@ AudioFile.setReadPercent file Int64.(to_int(div(mul file.newFrame
       else (
 	let outStream =
           if mNewOutputDevice <> mOutputDevice then (
-            log["playFile : mNewOutputDevice = ";soi mNewOutputDevice;", mOutputDevice = ";soi mOutputDevice];
 	    defOutputStream file file (Some outStream)
 	  )
 	  else outStream
@@ -295,10 +290,7 @@ AudioFile.setReadPercent file Int64.(to_int(div(mul file.newFrame
   	  | Some talker -> (
 	      let os = defOutputStream file prevFile outStreamOpt in
 
-	      if file.newFrame <> file.curFrame then (
-                (*  		ignore(Sndfile.seek talker.stream file.newFrame Sndfile.SEEK_SET);*)
-  		file.curFrame <- file.newFrame;
-  	      );
+              AudioFile.checkSeek file |> ignore;
 
 	      let (continu, outStream) = playFile file os in
 
