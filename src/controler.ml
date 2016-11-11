@@ -109,7 +109,7 @@ method setState s = Browser.state mPlayer <- s; L.iter(fun o -> o#seeState s) mO
   method nodes = mNodes
 
   method play = mPlayer#play;
-  method pause = 	mPlayer#pause;
+  method pause = mPlayer#pause;
   method stop = mPlayer#stop;
 
   method setVolume volumePercent =

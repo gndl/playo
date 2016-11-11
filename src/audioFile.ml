@@ -230,11 +230,11 @@ let addToPosition file samples =
 
 
 let setPositionPer10k file pos = Int64.(
-  file.newPosition <- div(mul file.duration (of_int pos)) (of_int 10000);
-  file.readPercent <- pos / 100
-)
-    
-  
+    file.newPosition <- div(mul file.duration (of_int pos)) (of_int 10000);
+    file.readPercent <- pos / 100
+  )
+
+
 let resetPosition file =
   file.newPosition <- Int64.zero;
   file.curPosition <- Int64.zero
@@ -377,117 +377,4 @@ let close lst =
       match f.voice with
       | Some talker -> Av.close_input talker.stream; f.voice <- None
       | None -> ()) lst
-
-(*
-let iterFileLst fct lst =
-let rec itr l =
-match l with
-| [] -> ()
-| nd::t -> (
-match nd.kind with
-| File f -> fct f
-| Dir d -> itr d.children;
-itr t
-);
-in
-itr lst
-
-
-let loadnode filename =
-
-let rec check filename l =
-try
-if Sys.is_directory filename then addDir filename l
-else addIfAudioFile filename (stat filename) l
-with e -> (traceMagenta(Printexc.to_string e); l )
-
-and addDir dirname l = (*trace("add dir "^dirname);*)
-let sons = Sys.readdir dirname in
-match (A.fold_left(fun l fn ->
-if fn.[0] = '.' then l else check (dirname^"/"^fn) l) [] sons) with
-| [] -> l
-| cl -> let (path, name) = splitFilename dirname in
-{name = name; path = path; kind = Dir{nodes = cl}}::l
-in
-if Sys.file_exists filename then check filename [] else []
-
-
-let isAudioFile filename =
-if filename.[0] = '.' then false else (
-try
-let p = S.rindex filename '.' in
-let ext = S.sub filename p (S.length filename - p) in
-
-if L.mem ext audio_ext then true else false
-
-with Not_found -> false
-)
-
-
-let loadt filename =
-
-let rec check idx filename =
-try
-if Sys.is_directory filename then addDir filename l
-else addIfAudioFile filename (stat filename) l
-with e -> (traceMagenta(Printexc.to_string e); l )
-
-and addDir dirname l = (*trace("add dir "^dirname);*)
-let ca = Sys.readdir dirname in
-let cl = A.fold_left(fun l fn -> if fn.[0] = '.' then l else fn::l) [] ca
-in
-let (dl, fl) = L.partition(fun n -> Sys.is_directory n) cl in
-let dl = L.fast_sort S.compare dl in
-let fl = L.fast_sort S.compare fl in
-let ca = A.of_list cl in
-let da = A.init
-
-let ca = A.mapi check 
-match () with
-| [] -> l
-| cl -> let (path, name) = splitFilename dirname in
-{node = {name = name; path = path; idx = ; kind = Dir{nodes = cl}}::l
-in
-if Sys.file_exists filename then check filename [] else []
-
-let unixload filename =
-
-let rec check filename l =
-let st = (*LargeFile.*)stat filename in
-
-match st.st_kind with
-| S_REG -> addIfAudioFile filename st l
-| S_DIR -> addDir filename l
-| S_CHR -> trace(filename^"is S_CHR"); l
-| S_BLK -> trace(filename^"is S_BLK"); l
-| S_LNK -> trace(filename^"is S_LNK"); l
-| S_FIFO -> trace(filename^"is S_FIFO"); l
-| S_SOCK -> trace(filename^"is S_SOCK"); l
-
-and addDir dirname l = trace("add dir "^dirname);
-let h = opendir dirname in
-
-let rec rddr l =
-let fn = try readdir h with End_of_file -> (closedir h; "") in
-if fn = "" then l else rddr(check fn l);
-in
-match rddr [] with
-| [] -> l
-| cl -> let (path, name) = splitFilename dirname in
-{name = name; path = path; kind = Dir{nodes = cl}}::l
-in
-check filename []
-*)
-
-
-(*
-let nodeOf = function File f -> f.node | Dir d -> d.node
-let nameOf t = (nodeOf t).name
-let pathOf t = (nodeOf t).path
-let idxOf t = (nodeOf t).idx
-let sizeOf t = (nodeOf t).size
-let parentOf t = (nodeOf t).parent
-
-
-*)
 

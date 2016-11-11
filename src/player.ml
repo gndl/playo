@@ -51,7 +51,6 @@ class c () = object (self)
 
 
   method getState = mState
-  (*	method setState s = mState <- s*)
 
   method isPlaying = mState = State.Play
 
@@ -190,15 +189,7 @@ class c () = object (self)
     in
 
     let open Bigarray in
-    (*
-    let outBuf = Array1.create float32 c_layout bufLen in
-    let genOutBuf = genarray_of_array1 outBuf in
-    let outBufPos = ref 0 in
-  let sin = Array.init bufLen (fun t -> sin(float_of_int t *. 2. *. pi *. 110. /. 44100.)) in
-for i = 0 to bufLen - 1 do
-outBuf.{i} <- sin.(i) *. mVolume;
-          done;
-*)
+
     let playChunk file outStream =
 
       let channels = AudioFile.channels file in
@@ -217,19 +208,12 @@ outBuf.{i} <- sin.(i) *. mVolume;
           let genOutBuf = genarray_of_array1 buffer in
 
           let continu = try
-              (*
-              if !outBufPos + readCount > bufLen then (
-                let samplesPerChannel = !outBufPos / channels in
-                outBufPos := 0;*)
 
        	      Portaudio.write_stream_ba outStream genOutBuf 0 samplesPerChannel;
 
               AudioFile.addToPosition file samplesPerChannel;
 
 	      Ev.asyncNotify(Ev.FileChanged file);
-                (*
-              );
-*)
               true
             with Portaudio.Error code -> (
 	        if code = errorCodeOutputUnderflowed then (
@@ -242,12 +226,6 @@ outBuf.{i} <- sin.(i) *. mVolume;
 	        )
 	      )
           in
-(*
-for i = 0 to readCount - 1 do
-outBuf.{!outBufPos + i} <- buffer.{i} *. mVolume;
-          done;
-          outBufPos := !outBufPos + readCount;
-          *)
 	  continu
 	)
       | Av.End_of_file -> (
