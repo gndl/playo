@@ -126,8 +126,7 @@ class c () = object (self)
 
 
   method private run() =
-    (*		try
-    *)
+
     let setState s =
       if mState <> s then (
 	mState <- s;
@@ -139,7 +138,7 @@ class c () = object (self)
 
     setState State.Play;
 
-    let bufLen = 10000 in
+    let bufLen = 16384 in
 
     let rec makeOutputStream file device =
       try
@@ -221,13 +220,13 @@ outBuf.{i} <- sin.(i) *. mVolume;
               (*
               if !outBufPos + readCount > bufLen then (
                 let samplesPerChannel = !outBufPos / channels in
-                outBufPos := 0;
-*)
-       	        Portaudio.write_stream_ba outStream genOutBuf 0 samplesPerChannel;
+                outBufPos := 0;*)
 
-                AudioFile.addToPosition file samplesPerChannel;
+       	      Portaudio.write_stream_ba outStream genOutBuf 0 samplesPerChannel;
 
-	        Ev.asyncNotify(Ev.FileChanged file);
+              AudioFile.addToPosition file samplesPerChannel;
+
+	      Ev.asyncNotify(Ev.FileChanged file);
                 (*
               );
 *)
@@ -242,9 +241,10 @@ outBuf.{i} <- sin.(i) *. mVolume;
 	          Ev.asyncNotify(Ev.Error msg); false
 	        )
 	      )
-          in(*
-	  for i = 0 to readCount - 1 do
-	    outBuf.{!outBufPos + i} <- buffer.{i} *. mVolume;
+          in
+(*
+for i = 0 to readCount - 1 do
+outBuf.{!outBufPos + i} <- buffer.{i} *. mVolume;
           done;
           outBufPos := !outBufPos + readCount;
           *)
@@ -311,9 +311,7 @@ outBuf.{i} <- sin.(i) *. mVolume;
     in
     mChangeFiles <- false;
     loop None;
-(*
-with e -> Ev.asyncNotify(Ev.Error(Printexc.to_string e));
-*)
+
     setState State.Stop;
     traceCyan"STOP";
 

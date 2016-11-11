@@ -123,7 +123,7 @@ let unexistentFile = {title = uk; artist = uk; album = uk; genre = uk;
                       readPercent = 0; rate = defRate; channels = 1;
                       streamIndex = -1; voice = None}
 let unexistentDir = {dnode = unexistentNode; children = [||]}
-(*let unexistent = Dir unexistentDir*)
+
 
 let hasInfo f = f.title <> uk || f.artist <> uk || f.album <> uk || f.genre <> uk
 let hasId f = f.title <> uk || f.artist <> uk || f.album <> uk
@@ -176,6 +176,7 @@ let checkPropertys file =
           if List.mem tag ["title"] then file.title <- v else
           if List.mem tag ["genre"] then file.genre <- v
         );
+      Av.close_input stream;
       true
     with e -> ( traceRed(filename ^ " " ^ Printexc.to_string e); false)
   )
@@ -374,7 +375,7 @@ let copy node =
 let close lst =
   iterFiles(fun f ->
       match f.voice with
-      | Some talker -> f.voice <- None
+      | Some talker -> Av.close_input talker.stream; f.voice <- None
       | None -> ()) lst
 
 (*
