@@ -19,14 +19,13 @@ open AudioFile
 open FFmpeg
 open Avutil
 
+module OutRsp = Swresample.Make (Swresample.FltBigArray) (Swresample.Frame)
 module Ev = EventBus
 
 let maxA = 1.
 
-let errorCodeOutputUnderflowed = -9980
-
-let initialize() = Portaudio.init ()
-let terminate() = Portaudio.terminate ()
+let initialize() = ()
+let terminate() = ()
 
 
 class c () = object (self)
@@ -36,18 +35,15 @@ class c () = object (self)
   val mPauseLock = Mutex.create()
   val mutable mChangeFiles = false
   val mutable mVolume = maxA /. 2.
-  val mutable mOutputDevice = 0
-  val mutable mNewOutputDevice = 0
+  val mutable mOutputDevice = ""
+  val mutable mNewOutputDevice = ""
 
 
   initializer
-    try
-      mOutputDevice <- Portaudio.get_default_output_device();
-      mNewOutputDevice <- mOutputDevice;
-    with Portaudio.Error code -> (
-        Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));
-	traceRed("Player.initializer "^Portaudio.string_of_error code);
-      );
+    mOutputDevice <- Avdevice.get_output_audio_devices()
+                     |> List.hd
+                     |> Av.Format.get_output_long_name;
+    mNewOutputDevice <- mOutputDevice;
 
 
   method getState = mState
@@ -62,47 +58,15 @@ class c () = object (self)
 
   method setVolume volumePercent = mVolume <- (volumePercent *. maxA) /. 100.
 
-  method getOutputDevice =
-    Portaudio.((get_device_info mNewOutputDevice).d_name)
+  method getOutputDevice = mNewOutputDevice
 
-  method changeOutputDevice newOutputDeviceName =
-    let open Portaudio in
-    let dcount = Portaudio.get_device_count () in
 
-    let rec search id =
-      if id < dcount then (
-	let dinfo = Portaudio.get_device_info id in
-
-	if dinfo.d_name = newOutputDeviceName then id else search(id + 1)
-      )
-      else -1
-    in
-
-    let newOutputDevice = search 0 in
-
-    if newOutputDevice >= 0 && newOutputDevice <> mOutputDevice then (
-      mNewOutputDevice <- newOutputDevice;
-    )
+  method changeOutputDevice newOutputDeviceName = mNewOutputDevice <- newOutputDeviceName
 
 
   method getOutputDevices =
-    let open Portaudio in
-    let dcount = Portaudio.get_device_count () in
-
-    let rec search id lst =
-      if id < dcount then (
-
-        let dinfo = Portaudio.get_device_info id in
-
-	if dinfo.d_max_output_channels > 0 then
-	  search(id + 1) (dinfo.d_name::lst) 
-	else
-	  search(id + 1) lst
-      )
-      else lst
-    in
-    L.rev(search 0 [])
-
+    Avdevice.get_output_audio_devices()
+    |> List.map Av.Format.get_output_long_name
 
   method play = ( match mState with
       | State.Play -> ()
@@ -128,8 +92,8 @@ class c () = object (self)
 
     let setState s =
       if mState <> s then (
-	mState <- s;
-	Ev.asyncNotify(Ev.State mState)
+        mState <- s;
+        Ev.asyncNotify(Ev.State mState)
       )
     in
 
@@ -137,55 +101,48 @@ class c () = object (self)
 
     setState State.Play;
 
-    let bufLen = 16384 in
+    let outputResampler = OutRsp.create outChannelLayout outRate
+        outChannelLayout ~out_sample_format:outSampleFormat outRate in
 
     let rec makeOutputStream file device =
       try
-  	let rate = foi(AudioFile.rate file) in
-	let channels = AudioFile.channels file in
-        let bufframes = bufLen / channels in
+        let fmts = Avdevice.get_output_audio_devices() in
 
-  	let outparam = Portaudio.{
-  	    channels;
-	    device;
-  	    sample_format = format_float32;
-	    latency = 1.
-	  }
-  	in
-	log[AudioFile.name file;" : channels = ";soi channels;", rate = ";sof rate;", bufframes = ";soi bufframes;", device = ";soi device];
-  	let stream = Portaudio.open_stream None (Some outparam) ~interleaved:true rate bufframes []
-	in
-	Portaudio.start_stream stream;
+        let fmt = try
+            List.find(fun d -> Av.Format.get_output_long_name d = device) fmts
+          with Not_found -> List.hd fmts in
 
-	if device <> mOutputDevice || device <> mNewOutputDevice then (
-	  mOutputDevice <- device;
-	  mNewOutputDevice <- device;
+        let o = Av.open_output_format fmt in
+        let codec_id = Av.Format.get_audio_codec_id fmt in
+
+        let stream = Av.new_audio_stream ~codec_id o in
+        (* outputResampler <- OutRsp.to_codec outChannelLayout outSampleFormat outRate outChannelLayout outSa *)
+        let dev = Av.Format.get_output_long_name fmt in
+
+        if mOutputDevice <> dev || mNewOutputDevice <> dev then (
+	  mOutputDevice <- dev;
+	  mNewOutputDevice <- dev;
 	  Ev.asyncNotify(Ev.OutputDeviceChanged self#getOutputDevice);
-	);
+        );
 
-	stream
-      with Portaudio.Error code -> (
-	  Ev.asyncNotify(Ev.Error(Portaudio.string_of_error code));
+        stream
+      with Avutil.Failure msg ->
+	Ev.Error msg |> Ev.asyncNotify;
 
-	  (* If the new device raise an error, we fallback to the previous device *)
-	  if device <> mOutputDevice then
-	    makeOutputStream file mOutputDevice
-	  else
-	    raise (Portaudio.Error code)
-	)
+	(* If the new device raise an error, we fallback to the previous device *)
+	if device <> mOutputDevice then
+	  makeOutputStream file mOutputDevice
+	else
+	  raise (Avutil.Failure msg)
     in
-
     let defOutputStream file prevFile = function
       | None -> makeOutputStream file mNewOutputDevice
       | Some stream ->
-	if mNewOutputDevice <> mOutputDevice
-	|| (AudioFile.rate file) <> (AudioFile.rate prevFile)
-	|| (AudioFile.channels file) <> (AudioFile.channels prevFile)
-	then (
-	  Portaudio.close_stream stream;
+        if mNewOutputDevice <> mOutputDevice then (
+          Av.get_output stream |> Av.close_output;
 	  makeOutputStream file mNewOutputDevice
-	)
-	else stream
+        )
+        else stream
     in
 
     let open Bigarray in
@@ -195,68 +152,60 @@ class c () = object (self)
       let channels = AudioFile.channels file in
       let talker = AudioFile.talker file in
 
-      match Av.read_audio talker.stream with
-      | Av.Audio af -> (
-          let buffer = Resampler.convert talker.resampler af in
+      match Av.read talker.stream with
+      | Av.Frame af -> (
+          let buffer = InRsp.convert talker.input_resampler af in
           let readCount = Array1.dim buffer in
           let samplesPerChannel = readCount / channels in
 
-	  for i = 0 to readCount - 1 do
-	    buffer.{i} <- buffer.{i} *. mVolume;
-          done;
-
-          let genOutBuf = genarray_of_array1 buffer in
+          if mVolume < 0.8 then (
+	    for i = 0 to readCount - 1 do
+	      buffer.{i} <- buffer.{i} *. mVolume;
+            done;
+          );
 
           let continu = try
-
-       	      Portaudio.write_stream_ba outStream genOutBuf 0 samplesPerChannel;
-
+              buffer |> OutRsp.convert outputResampler |> Av.write outStream;
               AudioFile.addToPosition file samplesPerChannel;
 
 	      Ev.asyncNotify(Ev.FileChanged file);
               true
-            with Portaudio.Error code -> (
-	        if code = errorCodeOutputUnderflowed then (
-                  traceYellow "Portaudio.write_stream_ba output underflowed error code"; true
-                )
-	        else (
-	          let msg = "Portaudio.write_stream_ba Error code "^soi code^" : "^Portaudio.string_of_error code
-	          in
-	          Ev.asyncNotify(Ev.Error msg); false
-	        )
+            with Avutil.Failure msg -> (
+                traceRed msg;
+	          Ev.Error msg |> Ev.asyncNotify; false
 	      )
           in
 	  continu
-	)
+        )
       | Av.End_of_file -> (
           AudioFile.resetPosition file;
 	  false
-	)
-      | exception Avutil.Failure msg -> Ev.asyncNotify(Ev.Error msg); false
+        )
+      | exception Avutil.Failure msg -> Ev.Error msg |> Ev.asyncNotify; false
     in
     let rec playFile file outStream =
 
       if mChangeFiles then (
-	mChangeFiles <- false;
-	(false, outStream)
+        mChangeFiles <- false;
+        (false, outStream)
       )
       else (
-	let outStream =
+        let outStream =
           if mNewOutputDevice <> mOutputDevice then (
 	    defOutputStream file file (Some outStream)
 	  )
 	  else outStream
-	in
-	match mState with
-	| State.Play ->
+        in
+        match mState with
+        | State.Play ->
 	  if playChunk file outStream then
 	    playFile file outStream
 	  else
 	    (true, outStream)
-	| State.Pause -> Ev.asyncNotify(Ev.PauseFile file); Mutex.lock mPauseLock;
+        | State.Pause -> Ev.asyncNotify(Ev.PauseFile file); Mutex.lock mPauseLock;
 	  Mutex.unlock mPauseLock; Ev.asyncNotify(Ev.StartFile file);
 	  playFile file outStream
-	| State.Stop -> Ev.asyncNotify(Ev.State mState); (false, outStream)
+        | State.Stop -> Ev.asyncNotify(Ev.State mState); (false, outStream)
       )
     in
     let rec iterFiles prevFile outStreamOpt = function
@@ -277,15 +226,15 @@ class c () = object (self)
 	      if continu then iterFiles file (Some outStream) tl
 	      else (Some outStream)
 	    )
-	)
+        )
     in
     let rec loop outStreamOpt =
       if mState != State.Stop && L.length mFiles > 0 then (
-  	loop(iterFiles (L.hd mFiles) outStreamOpt mFiles)
+        loop(iterFiles (L.hd mFiles) outStreamOpt mFiles)
       )
       else match outStreamOpt with
-	| None -> ()
-	| Some stream -> Portaudio.close_stream stream
+        | None -> ()
+        | Some stream -> Av.get_output stream |> Av.close_output;
     in
     mChangeFiles <- false;
     loop None;

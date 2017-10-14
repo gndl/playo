@@ -19,18 +19,22 @@ open Usual
 open FFmpeg
 open Avutil
 
-module Resampler = Swresample.Make (Swresample.Frame) (Swresample.FltBigArray)
+module InRsp = Swresample.Make (Swresample.Frame) (Swresample.FltBigArray)
 
 
 let audio_ext = [ ".wav"; ".ogg"; ".flac"; ".mp3"; ".pls"](*; ".m3u"*)
 let audio_ext_pattern = L.map(fun ext -> "*"^ext) audio_ext
 
+let outRate = 44100
+let outChannelLayout = Channel_layout.CL_stereo
+let outSampleFormat = Swresample.FltBigArray.sf
+
 let uk = ""
-let defRate = Int64.of_int 44100
+let defRate = Int64.of_int outRate
 
 type state = Single | Repeat | Track | Random | Pause | Off
 
-type talker = {stream : Av.t; resampler : Resampler.t}
+type talker = {stream : (input, audio)Av.stream; input_resampler : InRsp.t}
 
 
 type t = {
@@ -45,7 +49,7 @@ type t = {
   mutable readPercent : int;
   mutable rate : Int64.t;
   mutable channels : int;
-  mutable streamIndex : int;
+  mutable container : input container option;
   mutable voice : talker option
 }
 and node = {
@@ -76,7 +80,7 @@ let newPosition file = file.newPosition
 let readPercent file = file.readPercent
 let rate file = Int64.to_int file.rate
 let channels file = file.channels
-let streamIndex file = file.streamIndex
+let container file = file.container
 let voice file = file.voice
 let name file = file.fnode.name
 let path file = file.fnode.path
@@ -102,14 +106,14 @@ let makeDir ?(path = "") ?(idx = 0) ?(children = [||]) ?(parent = None) ?(state 
 
 let makeFile ?(idx = 0) ?(parent = None) ?(state = Off) ?(time = uk)
     ?(title = uk) ?(artist = uk) ?(album = uk) ?(genre = uk) ?(voice = None)
-    ?(rate = Int64.zero) ?(channels = 1) ?(streamIndex = -1) ?(size = uk) name path =
+    ?(rate = Int64.zero) ?(channels = 1) ?(container = None) ?(size = uk) name path =
 
   let fnode = {name; path; time; size; kind = Null; idx; parent; state; visible = true}
   in
   let file = {title; artist; album; genre; fnode;
               duration = Int64.zero; curPosition = Int64.zero; newPosition = Int64.zero;
               readPercent = 0; rate;
-              channels; streamIndex; voice}
+              channels; container; voice}
   in
   fnode.kind <- File file; file
 
@@ -121,7 +125,7 @@ let unexistentFile = {title = uk; artist = uk; album = uk; genre = uk;
                       duration = Int64.zero;
                       curPosition = Int64.zero; newPosition = Int64.zero;
                       readPercent = 0; rate = defRate; channels = 1;
-                      streamIndex = -1; voice = None}
+                      container = None; voice = None}
 let unexistentDir = {dnode = unexistentNode; children = [||]}
 
 
@@ -160,15 +164,18 @@ let checkPropertys file =
 
     file.fnode.size <- size filename;
     try
-      let stream = Av.open_input filename in
-      file.channels <- Av.get_nb_channels stream;
-      file.rate <- Int64.of_int(Av.get_sample_rate stream);
-      file.streamIndex <- Av.get_audio_stream_index stream;
-      let dur = Av.get_duration stream file.streamIndex Time_format.Nanosecond in
+      let container = Av.open_input filename in
+      let _, stream, codec = Av.find_best_audio_stream container in
+      
+      file.channels <- Avcodec.Audio.get_nb_channels codec;
+      file.rate <- Int64.of_int(Avcodec.Audio.get_sample_rate codec);
+      file.container <- Some container;
+
+      let dur = Av.get_duration stream Time_format.Nanosecond in
       file.duration <- Int64.(div(mul dur file.rate) secondFractions);
       file.fnode.time <- samplesToTime file.duration file.rate;
 
-      Av.get_metadata stream |> List.iter(fun(k, v) ->
+      Av.get_input_metadata container |> List.iter(fun(k, v) ->
           let tag = String.lowercase_ascii k in
 
           if List.mem tag ["artist"; "album_artist"] then file.artist <- v else
@@ -176,7 +183,7 @@ let checkPropertys file =
           if List.mem tag ["title"] then file.title <- v else
           if List.mem tag ["genre"] then file.genre <- v
         );
-      Av.close_input stream;
+      Av.close_input container;
       true
     with e -> ( traceRed(filename ^ " " ^ Printexc.to_string e); false)
   )
@@ -193,12 +200,11 @@ let talker file =
   match file.voice with
   | None -> (
       let filename = filename file in
-      let stream = Av.open_input filename in
-      let af = Av.get_audio_format stream in
+      let container = Av.open_input filename in
+      let _, stream, codec = Av.find_best_audio_stream container in
 
-      let resampler = Resampler.of_in_audio_format af af.channel_layout af.sample_rate
-      in
-      let talker = {stream; resampler} in
+      let input_resampler = InRsp.from_codec codec outChannelLayout outRate in
+      let talker = {stream; input_resampler} in
       file.voice <- Some talker;
       talker)
   | Some talker -> talker
@@ -211,7 +217,7 @@ let checkSeek file =
 
   if file.newPosition <> file.curPosition then (
     let p = Int64.(div(mul file.newPosition secondFractions) file.rate) in
-    Av.seek_frame(stream file) file.streamIndex Time_format.Nanosecond p [||];
+    Av.seek(stream file) Time_format.Nanosecond p [||];
     file.curPosition <- file.newPosition;
     traceMagenta"Seek !";
     true
@@ -250,7 +256,7 @@ let addIfAudioFile filename l =
       let f = {title = uk; artist = uk; album = uk; genre = uk; fnode;
                duration = Int64.zero;
                curPosition = Int64.zero; newPosition = Int64.zero; readPercent = 0;
-	       rate = Int64.zero; channels = 1; streamIndex = -1; voice = None}
+	       rate = Int64.zero; channels = 1; container = None; voice = None}
       in fnode.kind <- File f;
       fnode::l)
     else l
@@ -374,7 +380,7 @@ let copy node =
 
 let close lst =
   iterFiles(fun f ->
-      match f.voice with
-      | Some talker -> Av.close_input talker.stream; f.voice <- None
+      match f.container with
+      | Some container -> Av.close_input container; f.container <- None; f.voice <- None
       | None -> ()) lst
 

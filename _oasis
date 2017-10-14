@@ -3,11 +3,11 @@ OCamlVersion: >= 4.01
 Name:        playo
 Version:     0.2
 Synopsis:    A simple audio player in OCaml
-Authors:     Gaëtan Dubreil
+Authors:     Gaï¿½tan Dubreil
 LicenseFile: LICENSE
 License:     GPL-3
 Plugins:     META (0.4), StdFiles (0.4), DevFiles (0.4)
-PreConfCommand: opam install lablgtk portaudio config-file
+PreConfCommand: opam install lablgtk config-file
 PreBuildCommand: cd src && lablgladecc2 -embed -hide-default playoGui.glade > playoGui.ml
 
 Executable playo
@@ -15,8 +15,8 @@ Executable playo
   BuildTools: ocamlbuild
   MainIs:     playo.ml
   CompiledObject: best
-  BuildDepends: unix, threads, str, bigarray, lablgtk2, lablgtk2.glade, ffmpeg, portaudio, config-file
-  NativeOpt: -ffast-math -unsafe -inline 10 -noassert
+  BuildDepends: unix, threads, str, bigarray, lablgtk2, lablgtk2.glade, ffmpeg, config-file
+  NativeOpt: -ffast-math -unsafe -inline 10 -noassert -g
   CCOpt: -O3
 
 SourceRepository master
