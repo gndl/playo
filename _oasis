@@ -7,7 +7,7 @@ Authors:     Ga�tan Dubreil
 LicenseFile: LICENSE
 License:     GPL-3
 Plugins:     META (0.4), StdFiles (0.4), DevFiles (0.4)
-PreConfCommand: opam install -y lablgtk config-file
+PreConfCommand: opam install -y lablgtk config-file gstreamer
 PreBuildCommand: cd src && lablgladecc2 -embed -hide-default playoGui.glade > playoGui.ml
 
 Executable playo
