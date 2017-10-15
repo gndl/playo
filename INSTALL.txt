@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 467222dac66e20c58af66cd64ac183c0) *)
+(* DO NOT EDIT (digest: 68e3fd0d36d12fe61e6c0c382e108f39) *)
 
 This is the INSTALL file for the playo distribution.
 
@@ -15,7 +15,6 @@ In order to compile this package, you will need:
 * findlib
 * lablgtk2
 * ffmpeg
-* portaudio
 * config-file
 
 Installing
