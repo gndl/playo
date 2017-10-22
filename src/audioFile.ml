@@ -183,7 +183,7 @@ let checkPropertys file =
           if List.mem tag ["title"] then file.title <- v else
           if List.mem tag ["genre"] then file.genre <- v
         );
-      Av.close_input container;
+      Av.close container;
       true
     with e -> ( traceRed(filename ^ " " ^ Printexc.to_string e); false)
   )
@@ -381,6 +381,6 @@ let copy node =
 let close lst =
   iterFiles(fun f ->
       match f.container with
-      | Some container -> Av.close_input container; f.container <- None; f.voice <- None
+      | Some container -> Av.close container; f.container <- None; f.voice <- None
       | None -> ()) lst
 

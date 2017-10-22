@@ -104,7 +104,7 @@ class c () = object (self)
     let outputResampler = OutRsp.create outChannelLayout outRate
         outChannelLayout ~out_sample_format:outSampleFormat outRate in
 
-    let rec makeOutputStream file device =
+    let rec makeOutput file device =
       try
         let fmts = Avdevice.get_output_audio_devices() in
 
@@ -112,11 +112,8 @@ class c () = object (self)
             List.find(fun d -> Av.Format.get_output_long_name d = device) fmts
           with Not_found -> List.hd fmts in
 
-        let o = Av.open_output_format fmt in
-        let codec_id = Av.Format.get_audio_codec_id fmt in
+        let output = Av.open_output_format fmt in
 
-        let stream = Av.new_audio_stream ~codec_id o in
-        (* outputResampler <- OutRsp.to_codec outChannelLayout outSampleFormat outRate outChannelLayout outSa *)
         let dev = Av.Format.get_output_long_name fmt in
 
         if mOutputDevice <> dev || mNewOutputDevice <> dev then (
@@ -125,29 +122,29 @@ class c () = object (self)
 	  Ev.asyncNotify(Ev.OutputDeviceChanged self#getOutputDevice);
         );
 
-        stream
+        output
       with Avutil.Failure msg ->
 	Ev.Error msg |> Ev.asyncNotify;
 
 	(* If the new device raise an error, we fallback to the previous device *)
 	if device <> mOutputDevice then
-	  makeOutputStream file mOutputDevice
+	  makeOutput file mOutputDevice
 	else
 	  raise (Avutil.Failure msg)
     in
-    let defOutputStream file prevFile = function
-      | None -> makeOutputStream file mNewOutputDevice
-      | Some stream ->
+    let defOutput file prevFile = function
+      | None -> makeOutput file mNewOutputDevice
+      | Some output ->
         if mNewOutputDevice <> mOutputDevice then (
-          Av.get_output stream |> Av.close_output;
-	  makeOutputStream file mNewOutputDevice
+          Av.close output;
+	  makeOutput file mNewOutputDevice
         )
-        else stream
+        else output
     in
 
     let open Bigarray in
 
-    let playChunk file outStream =
+    let playChunk file out =
 
       let channels = AudioFile.channels file in
       let talker = AudioFile.talker file in
@@ -158,83 +155,82 @@ class c () = object (self)
           let readCount = Array1.dim buffer in
           let samplesPerChannel = readCount / channels in
 
-          if mVolume < 0.8 then (
-	    for i = 0 to readCount - 1 do
-	      buffer.{i} <- buffer.{i} *. mVolume;
-            done;
-          );
+	  for i = 0 to readCount - 1 do
+	    buffer.{i} <- buffer.{i} *. mVolume;
+          done;
 
           let continu = try
-              buffer |> OutRsp.convert outputResampler |> Av.write outStream;
+              buffer |> OutRsp.convert outputResampler |> Av.write_audio out;
+
               AudioFile.addToPosition file samplesPerChannel;
 
 	      Ev.asyncNotify(Ev.FileChanged file);
               true
             with Avutil.Failure msg -> (
                 traceRed msg;
-	          Ev.Error msg |> Ev.asyncNotify; false
+	        Ev.Error msg |> Ev.asyncNotify; false
 	      )
           in
 	  continu
         )
-      | Av.End_of_file -> (
+      | Av.End_of_stream -> (
           AudioFile.resetPosition file;
 	  false
         )
       | exception Avutil.Failure msg -> Ev.Error msg |> Ev.asyncNotify; false
     in
-    let rec playFile file outStream =
+    let rec playFile file out =
 
       if mChangeFiles then (
         mChangeFiles <- false;
-        (false, outStream)
+        (false, out)
       )
       else (
-        let outStream =
+        let out =
           if mNewOutputDevice <> mOutputDevice then (
-	    defOutputStream file file (Some outStream)
+	    defOutput file file (Some out)
 	  )
-	  else outStream
+	  else out
         in
         match mState with
         | State.Play ->
-	  if playChunk file outStream then
-	    playFile file outStream
+	  if playChunk file out then
+	    playFile file out
 	  else
-	    (true, outStream)
+	    (true, out)
         | State.Pause -> Ev.asyncNotify(Ev.PauseFile file); Mutex.lock mPauseLock;
 	  Mutex.unlock mPauseLock; Ev.asyncNotify(Ev.StartFile file);
-	  playFile file outStream
-        | State.Stop -> Ev.asyncNotify(Ev.State mState); (false, outStream)
+	  playFile file out
+        | State.Stop -> Ev.asyncNotify(Ev.State mState); (false, out)
       )
     in
-    let rec iterFiles prevFile outStreamOpt = function
-      | [] -> Ev.asyncNotify(Ev.EndList prevFile); outStreamOpt
+    let rec iterFiles prevFile outOpt = function
+      | [] -> Ev.asyncNotify(Ev.EndList prevFile); outOpt
       | file::tl -> (
   	  Ev.asyncNotify(Ev.StartFile file);
   	  match file.voice with
-  	  | None -> Ev.asyncNotify(Ev.EndFile file); outStreamOpt
+  	  | None -> Ev.asyncNotify(Ev.EndFile file); outOpt
   	  | Some talker -> (
-	      let os = defOutputStream file prevFile outStreamOpt in
+	      let os = defOutput file prevFile outOpt in
 
               AudioFile.checkSeek file |> ignore;
 
-	      let (continu, outStream) = playFile file os in
+	      let (continu, out) = playFile file os in
 
 	      Ev.asyncNotify(Ev.EndFile file);
 
-	      if continu then iterFiles file (Some outStream) tl
-	      else (Some outStream)
+	      if continu then iterFiles file (Some out) tl
+	      else (Some out)
 	    )
         )
     in
-    let rec loop outStreamOpt =
+    let rec loop outOpt =
       if mState != State.Stop && L.length mFiles > 0 then (
-        loop(iterFiles (L.hd mFiles) outStreamOpt mFiles)
+        loop(iterFiles (L.hd mFiles) outOpt mFiles)
       )
-      else match outStreamOpt with
+      else match outOpt with
         | None -> ()
-        | Some stream -> Av.get_output stream |> Av.close_output;
+        | Some output -> Av.close output;
     in
     mChangeFiles <- false;
     loop None;
