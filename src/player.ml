@@ -40,9 +40,8 @@ class c () = object (self)
 
 
   initializer
-    mOutputDevice <- Avdevice.get_output_audio_devices()
-                     |> List.hd
-                     |> Av.Format.get_output_long_name;
+    mOutputDevice <- Avdevice.get_default_audio_output_format()
+                     |> Av.Format.get_output_name;
     mNewOutputDevice <- mOutputDevice;
 
 
@@ -58,14 +57,20 @@ class c () = object (self)
 
   method setVolume volumePercent = mVolume <- (volumePercent *. maxA) /. 100.
 
-  method getOutputDevice = mNewOutputDevice
+  method getOutputDevice =
+    Avdevice.get_audio_output_formats()
+    |> List.find(fun fmt -> Av.Format.get_output_name fmt = mNewOutputDevice)
+    |> Av.Format.get_output_long_name
 
 
-  method changeOutputDevice newOutputDeviceName = mNewOutputDevice <- newOutputDeviceName
+  method changeOutputDevice newOutputDeviceName = mNewOutputDevice <-
+      Avdevice.get_audio_output_formats()
+      |> List.find(fun fmt -> Av.Format.get_output_long_name fmt = newOutputDeviceName)
+      |> Av.Format.get_output_name
 
 
   method getOutputDevices =
-    Avdevice.get_output_audio_devices()
+    Avdevice.get_audio_output_formats()
     |> List.map Av.Format.get_output_long_name
 
   method play = ( match mState with
@@ -106,19 +111,11 @@ class c () = object (self)
 
     let rec makeOutput file device =
       try
-        let fmts = Avdevice.get_output_audio_devices() in
+        let output = Avdevice.open_audio_output device in
 
-        let fmt = try
-            List.find(fun d -> Av.Format.get_output_long_name d = device) fmts
-          with Not_found -> List.hd fmts in
-
-        let output = Av.open_output_format fmt in
-
-        let dev = Av.Format.get_output_long_name fmt in
-
-        if mOutputDevice <> dev || mNewOutputDevice <> dev then (
-	  mOutputDevice <- dev;
-	  mNewOutputDevice <- dev;
+        if mOutputDevice <> device || mNewOutputDevice <> device then (
+	  mOutputDevice <- device;
+	  mNewOutputDevice <- device;
 	  Ev.asyncNotify(Ev.OutputDeviceChanged self#getOutputDevice);
         );
 
