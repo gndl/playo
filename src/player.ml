@@ -147,7 +147,7 @@ class c () = object (self)
       let talker = AudioFile.talker file in
 
       match Av.read talker.stream with
-      | Av.Frame af -> (
+      | `frame af -> (
           let buffer = InRsp.convert talker.input_resampler af in
           let readCount = Array1.dim buffer in
           let samplesPerChannel = readCount / channels in
@@ -170,7 +170,7 @@ class c () = object (self)
           in
 	  continu
         )
-      | Av.End_of_stream -> (
+      | `end_of_stream -> (
           AudioFile.resetPosition file;
 	  false
         )

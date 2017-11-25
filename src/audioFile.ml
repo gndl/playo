@@ -171,7 +171,7 @@ let checkPropertys file =
       file.rate <- Int64.of_int(Avcodec.Audio.get_sample_rate codec);
       file.container <- Some container;
 
-      let dur = Av.get_duration stream Time_format.Nanosecond in
+      let dur = Av.get_duration ~format:`nanosecond stream in
       file.duration <- Int64.(div(mul dur file.rate) secondFractions);
       file.fnode.time <- samplesToTime file.duration file.rate;
 
@@ -217,7 +217,7 @@ let checkSeek file =
 
   if file.newPosition <> file.curPosition then (
     let p = Int64.(div(mul file.newPosition secondFractions) file.rate) in
-    Av.seek(stream file) Time_format.Nanosecond p [||];
+    Av.seek(stream file) `nanosecond p [||];
     file.curPosition <- file.newPosition;
     traceMagenta"Seek !";
     true
