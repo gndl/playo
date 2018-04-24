@@ -26,7 +26,7 @@ let audio_ext = [ ".wav"; ".ogg"; ".flac"; ".mp3"; ".pls"](*; ".m3u"*)
 let audio_ext_pattern = L.map(fun ext -> "*"^ext) audio_ext
 
 let outRate = 44100
-let outChannelLayout = Channel_layout.CL_stereo
+let outChannelLayout = `Stereo
 let outSampleFormat = Swresample.FltBigArray.sf
 
 let uk = ""
@@ -171,7 +171,7 @@ let checkPropertys file =
       file.rate <- Int64.of_int(Avcodec.Audio.get_sample_rate codec);
       file.container <- Some container;
 
-      let dur = Av.get_duration ~format:`nanosecond stream in
+      let dur = Av.get_duration ~format:`Nanosecond stream in
       file.duration <- Int64.(div(mul dur file.rate) secondFractions);
       file.fnode.time <- samplesToTime file.duration file.rate;
 
@@ -217,7 +217,7 @@ let checkSeek file =
 
   if file.newPosition <> file.curPosition then (
     let p = Int64.(div(mul file.newPosition secondFractions) file.rate) in
-    Av.seek(stream file) `nanosecond p [||];
+    Av.seek(stream file) `Nanosecond p [||];
     file.curPosition <- file.newPosition;
     traceMagenta"Seek !";
     true
