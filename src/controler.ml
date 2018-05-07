@@ -159,7 +159,7 @@ self#checkPropertys file
 
   method changeFiles nodes =
 
-    let selectionIsSame = try L.for_all2(==) mSelectedNodes nodes 
+    let selectionIsSame = try L.for_all2(==) mSelectedNodes nodes
       with Invalid_argument e -> false
     in
     if selectionIsSame then (

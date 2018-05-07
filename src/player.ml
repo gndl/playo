@@ -109,7 +109,7 @@ class c () = object (self)
     let outputResampler = OutRsp.create outChannelLayout outRate
         outChannelLayout ~out_sample_format:outSampleFormat outRate in
 
-    let rec makeOutput file device =
+    let rec makeOutput device =
       try
         let output = Avdevice.open_audio_output device in
 
@@ -125,16 +125,16 @@ class c () = object (self)
 
 	(* If the new device raise an error, we fallback to the previous device *)
 	if device <> mOutputDevice then
-	  makeOutput file mOutputDevice
+	  makeOutput mOutputDevice
 	else
 	  raise (Avutil.Failure msg)
     in
-    let defOutput file prevFile = function
-      | None -> makeOutput file mNewOutputDevice
+    let defOutput = function
+      | None -> makeOutput mNewOutputDevice
       | Some output ->
         if mNewOutputDevice <> mOutputDevice then (
           Av.close output;
-	  makeOutput file mNewOutputDevice
+	  makeOutput mNewOutputDevice
         )
         else output
     in
@@ -185,7 +185,7 @@ class c () = object (self)
       else (
         let out =
           if mNewOutputDevice <> mOutputDevice then (
-	    defOutput file file (Some out)
+	    defOutput (Some out)
 	  )
 	  else out
         in
@@ -202,13 +202,13 @@ class c () = object (self)
       )
     in
     let rec iterFiles prevFile outOpt = function
-      | [] -> Ev.asyncNotify(Ev.EndList prevFile); outOpt
+      | [] -> Ev.notify(Ev.EndList prevFile); outOpt
       | file::tl -> (
   	  Ev.asyncNotify(Ev.StartFile file);
   	  match file.voice with
   	  | None -> Ev.asyncNotify(Ev.EndFile file); outOpt
   	  | Some talker -> (
-	      let os = defOutput file prevFile outOpt in
+	      let os = defOutput outOpt in
 
               AudioFile.checkSeek file |> ignore;
 
