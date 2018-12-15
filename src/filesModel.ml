@@ -44,7 +44,7 @@ class c = object (self)
 
   val mutable mRootDirs : row array = [||]
 
-  method custom_flags : GtkEnums.tree_model_flags list = [`ITERS_PERSIST]
+  method! custom_flags : GtkEnums.tree_model_flags list = [`ITERS_PERSIST]
 
   method custom_get_iter (path:Gtk.tree_path) : row option =
     let indices  = GTree.Path.get_indices path in
@@ -96,7 +96,7 @@ class c = object (self)
     GTree.Path.create(mkl row [])
 
 
-  method custom_value (t:Gobject.g_type) (row:row) ~column =
+  method custom_value (_:Gobject.g_type) (row:row) ~column =
     if column = 0 then `STRING(Some row.name) else
     if column = 5 then `STRING(Some row.time) else
     if column = 7 then `STRING(Some row.size) else
@@ -127,13 +127,13 @@ class c = object (self)
   method custom_iter_children (rowopt:row option) : row option =
     match rowopt with
     (*| None | Some {kind = Dir { children = [||] }} | Some {kind = File} -> None*)
-    | Some {kind = Dir { children = nodes }} -> Some nodes.(0)
+    | Some {kind = Dir { children = nodes; _ }; _} -> Some nodes.(0)
     | _ -> None
 
 
   method custom_iter_has_child (row:row) : bool =
     match row.kind with 
-    | Dir { children = nodes } -> A.length nodes > 0
+    | Dir { children = nodes; _} -> A.length nodes > 0
     | _ -> false
 
 
@@ -141,14 +141,14 @@ class c = object (self)
     match rowopt with
     | None -> A.length mRootDirs
     (*    | Some {kind = File f} | Some {kind = Null} -> 0*)
-    | Some {kind = Dir { children = nodes }} -> A.length nodes
+    | Some {kind = Dir { children = nodes; _}; _} -> A.length nodes
     | _ -> 0
 
 
   method custom_iter_nth_child (rowopt:row option) (n:int) : row option =
     match rowopt with
     | None when A.length mRootDirs > 0 -> Some mRootDirs.(0)
-    | Some {kind = Dir { children = ns }} when n < A.length ns -> Some ns.(n)
+    | Some {kind = Dir { children = ns; _}; _} when n < A.length ns -> Some ns.(n)
     | _ -> None
 
 

@@ -17,39 +17,39 @@
 open Usual
 
 let () =
-	try
-	let fl = A.fold_left ~f:(fun fl f -> if Sys.file_exists f then f::fl else fl)
-			~init:[] (A.sub Sys.argv 1 (A.length Sys.argv - 1))
-	in
-	
-	Player.initialize();
+  try
+    let fl = A.fold_left ~f:(fun fl f -> if Sys.file_exists f then f::fl else fl)
+	~init:[] (A.sub Sys.argv ~pos:1 ~len:(A.length Sys.argv - 1))
+    in
 
-	let ctrl = Controler.make ~filenameList:fl () in
+    Player.initialize();
 
-	ignore(GtkMain.Main.init());
+    let ctrl = Controler.make ~filenameList:fl () in
 
-	let gui = new PlayoGui.mainWindow() in
+    ignore(GtkMain.Main.init());
 
-	let mainWindow = new MainWindow.c gui ctrl in
-	mainWindow#init();
-	let filesModel = new FilesModel.c in
+    let gui = new PlayoGui.mainWindow() in
 
-	ctrl#init();
-	filesModel#setNodes ctrl#nodes;
+    let mainWindow = new MainWindow.c gui ctrl in
+    mainWindow#init();
+    let filesModel = new FilesModel.c in
 
-	let filesView = new FilesView.c filesModel 
-		gui#audioFileTreeview ctrl gui#toplevel in
+    ctrl#init();
+    filesModel#setNodes ctrl#nodes;
 
-	filesView#init();
-  
-	GtkThread.main ();
+    let filesView = new FilesView.c filesModel 
+      gui#audioFileTreeview ctrl gui#toplevel in
 
-	ctrl#release();
+    filesView#init();
 
-	Player.terminate();
+    GtkThread.main ();
 
-	with e -> (
-		traceMagenta(Printexc.to_string e);
-		traceYellow(Printexc.get_backtrace());
-		Printexc.record_backtrace true;
-	);
+    ctrl#release();
+
+    Player.terminate();
+
+  with e -> (
+      traceMagenta(Printexc.to_string e);
+      traceYellow(Printexc.get_backtrace());
+      Printexc.record_backtrace true;
+    );

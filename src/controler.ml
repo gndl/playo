@@ -45,11 +45,11 @@ class c ?(filenameList = []) () = object (self)
     mPlayer#setVolume(Configuration.getVolume());
     self#addFiles ~save:false (Configuration.getFiles());
 
-    L.iter(fun (playlistName, files) -> self#newPlaylist playlistName;
-	    L.iter(fun (fileName, filePath) ->
-		self#addNode(AudioFile.makeFile fileName filePath).fnode;
-	      ) files;
-	  ) (Configuration.getPlaylists());
+    L.iter ~f:(fun (playlistName, files) -> self#newPlaylist playlistName;
+	        L.iter ~f:(fun (fileName, filePath) ->
+		    self#addNode(AudioFile.makeFile fileName filePath).fnode;
+	          ) files;
+	      ) (Configuration.getPlaylists());
 
     let outputDevice = Configuration.getOutputDevice()
     in
@@ -77,13 +77,13 @@ class c ?(filenameList = []) () = object (self)
   method observe =	function
     (*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
     | Ev.StartFile f -> f.fnode.state <- mPlayMode;
-      L.iter(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
+      L.iter ~f:(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
 (*
 match f.fnode.state with
 | Off -> f.fnode.state <- if mPlayMode = Repeat then Single else mPlayMode
 | _ -> ()*)
     | Ev.PauseFile f -> f.fnode.state <- Pause;
-      L.iter(fun nd -> nd.state <- Pause) mSelectedNodes;
+      L.iter ~f:(fun nd -> nd.state <- Pause) mSelectedNodes;
     | Ev.EndFile f -> f.fnode.state <- Off(*
 match f.fnode.state with
 | Repeat -> ()
@@ -135,7 +135,7 @@ self#checkPropertys file
     if self#checkPropertys file then (
       try
 	let _ = AudioFile.stream file in true
-      with e -> (
+      with _ -> (
 	  Ev.notify(Ev.Error "Error");
 	  false
 	)
@@ -144,12 +144,12 @@ self#checkPropertys file
 *)
 
   method addFiles ?(save = true) filenameList =
-    let ll = L.map(fun fn -> trace("add "^fn);
-		    AudioFile.load fn (Configuration.getHiddenFiles())) filenameList
+    let ll = L.map ~f:(fun fn -> trace("add "^fn);
+		        AudioFile.load fn (Configuration.getHiddenFiles())) filenameList
     in
     let children = A.of_list(L.flatten ll) in
     AudioFile.addChildrenToDir children mFolders;
-    A.iter(fun nd -> Ev.notify(Ev.AddFile nd)) children;
+    A.iter ~f:(fun nd -> Ev.notify(Ev.AddFile nd)) children;
     (*mNodes <- AudioFile.concatChildren mNodes (A.of_list(L.flatten ll));*)
     if save then Configuration.addFiles filenameList;
 
@@ -159,15 +159,15 @@ self#checkPropertys file
 
   method changeFiles nodes =
 
-    let selectionIsSame = try L.for_all2(==) mSelectedNodes nodes
-      with Invalid_argument e -> false
+    let selectionIsSame = try L.for_all2 ~f:(==) mSelectedNodes nodes
+      with Invalid_argument _ -> false
     in
     if selectionIsSame then (
       if mPlayer#isPlaying then mPlayer#pause else mPlayer#play;
     )
     else (
-      L.iter(fun nd -> nd.state <- Off) mSelectedNodes;
-      L.iter(fun nd -> nd.state <- mPlayMode) nodes;
+      L.iter ~f:(fun nd -> nd.state <- Off) mSelectedNodes;
+      L.iter ~f:(fun nd -> nd.state <- mPlayMode) nodes;
       mSelectedNodes <- nodes;
 
       let rec mkFileLst fl nd =
@@ -219,16 +219,16 @@ self#checkPropertys file
 
       let rec mkFileLst fl nd =
 	match nd.kind with
-	| File f -> nd::fl
+	| File _f -> nd::fl
 	| Dir d -> A.fold_left ~f:mkFileLst ~init:fl d.children
 	| Null -> fl
       in
       if node != mPlaylists.dnode
       && mCurPlaylist != AudioFile.unexistentDir then (
 	let lst = L.rev(mkFileLst [] node) in
-	let children = A.of_list(L.map AudioFile.copy lst) in
+	let children = A.of_list(L.map ~f:AudioFile.copy lst) in
 	AudioFile.addChildrenToDir children mCurPlaylist;
-	A.iter(fun nd -> Ev.notify(Ev.AddFile nd)) children;
+	A.iter ~f:(fun nd -> Ev.notify(Ev.AddFile nd)) children;
       )
     )
 

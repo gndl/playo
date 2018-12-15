@@ -29,9 +29,9 @@ let is_string_prefix s1 s2 =
 let image_filter () =
   let f = GFile.filter ~name:"Images" () in
   f#add_custom [ `MIME_TYPE ]
-    (fun info ->
-      let mime = L.assoc `MIME_TYPE info in
-      is_string_prefix "image/" mime) ;
+     ~callback:(fun info ->
+       let mime = L.assoc `MIME_TYPE info in
+       is_string_prefix "image/" mime) ;
   f
 
 let text_filter () = 
@@ -51,18 +51,18 @@ let audioFilter () =
 
 
 let getEntry parent title defaultValue = 
-	let dialog = GWindow.dialog ~title
-		~parent ~destroy_with_parent:true ~show:true () in
-	let entry = GEdit.entry ~text:defaultValue ~packing: dialog#vbox#add () in
+  let dialog = GWindow.dialog ~title
+      ~parent ~destroy_with_parent:true ~show:true () in
+  let entry = GEdit.entry ~text:defaultValue ~packing: dialog#vbox#add () in
 
-	dialog#add_button_stock `OK `OK ;
+  dialog#add_button_stock `OK `OK ;
   dialog#add_button_stock `CANCEL `CANCEL ;
 
   let res = match dialog#run () with
-	  | `OK -> Some entry#text
-	  | `DELETE_EVENT | `CANCEL -> None
-	in
-	dialog#destroy (); res
+    | `OK -> Some entry#text
+    | `DELETE_EVENT | `CANCEL -> None
+  in
+  dialog#destroy (); res
 
 
 let showErrorMessage parent message = 
@@ -77,29 +77,29 @@ let showErrorMessage parent message =
 let selectFile parent filter =
   let dialog = GWindow.file_chooser_dialog 
       ~action:`SELECT_FOLDER
-(*      ~title:"Open File"*)
+      (*      ~title:"Open File"*)
       ~parent () in
   dialog#add_button_stock `CANCEL `CANCEL ;
   dialog#add_select_button_stock `OPEN `OPEN ;
-	dialog#set_select_multiple true;
+  dialog#set_select_multiple true;
   dialog#add_filter (filter ()) ;
   let res = match dialog#run () with
-	  | `OPEN -> Some dialog#get_filenames
-	  | `DELETE_EVENT | `CANCEL -> None
-	in
+    | `OPEN -> Some dialog#get_filenames
+    | `DELETE_EVENT | `CANCEL -> None
+  in
   dialog#destroy (); res
 
 
 let saveFile parent filter =
   let dialog = GWindow.file_chooser_dialog 
       ~action:`SAVE
-(*      ~title:"Open File"*)
+      (*      ~title:"Open File"*)
       ~parent () in
   dialog#add_button_stock `CANCEL `CANCEL ;
   dialog#add_select_button_stock `SAVE `SAVE ;
   dialog#add_filter (filter ()) ;
   let res = match dialog#run () with
-	  | `SAVE -> dialog#filename
-	  | `DELETE_EVENT | `CANCEL -> None
-	in
+    | `SAVE -> dialog#filename
+    | `DELETE_EVENT | `CANCEL -> None
+  in
   dialog#destroy (); res

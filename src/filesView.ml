@@ -15,7 +15,6 @@
  *)
 
 open Usual
-open StdLabels
 open AudioFile
 open FilesModel
 
@@ -40,7 +39,7 @@ let supColName = "Sup"
 let columns = [addColName; nameColName; timeColName; supColName; titleColName; artistColName; albumColName; genreColName; sizeColName; pathColName]
 
 
-class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) toplevel =
+class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) _ =
   let nullColumn = GTree.view_column() in
   object (self)
     val mutable mAddCol = nullColumn
@@ -153,7 +152,7 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 	)
       in
 
-      L.iter addColumn (match Configuration.getColumns() with
+      L.iter ~f:addColumn (match Configuration.getColumns() with
 	  | [] -> Configuration.setColumns columns; columns
 	  | l -> l);
 
@@ -232,7 +231,7 @@ filesTreeview#connect#after#row_activated ~callback:
 
 	  if mTimeCol#get_sort_column_id = colId then (
 	    match filesModel#custom_get_iter path with
-	    | Some {kind = File f} ->
+	    | Some {kind = File f; _} ->
 	      ctrl#setFilePosition f ((colX * 10000) / col#width);
 	      filesModel#custom_row_changed path f.fnode; true
 	    | _ -> false
@@ -275,7 +274,7 @@ filesTreeview#connect#after#row_activated ~callback:
 	);
 
 
-    method buttonReleased ev =
+    method buttonReleased _ =
       mButtonPressed <- false;
       false
 
@@ -312,13 +311,13 @@ filesTreeview#connect#after#row_activated ~callback:
     method rowClicked() =
       if filesTreeview#hover_selection then ()
       else (
-	L.iter (fun p -> match filesModel#custom_get_iter p with
-	    | Some row -> ()
+	L.iter ~f:(fun p -> match filesModel#custom_get_iter p with
+	    | Some _ -> ()
 	    | None -> traceRed "Path not found !") filesTreeview#selection#get_selected_rows;
       );
 
 
-    method activeHoverMode path col =
+    method activeHoverMode _ _ =
       ctrl#play;
       filesTreeview#set_hover_selection true;
       filesTreeview#set_hover_expand true;
@@ -343,7 +342,7 @@ filesTreeview#connect#after#row_activated ~callback:
     method renderProgress prgRndrr (model:GTree.model) iter =
       let path = model#get_path iter in
       match filesModel#custom_get_iter path with
-      | Some {kind = File f} -> (
+      | Some {kind = File f; _} -> (
 	  if ctrl#checkPropertys f then (
 	    prgRndrr#set_properties [
 	      `VISIBLE true;

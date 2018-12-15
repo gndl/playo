@@ -14,10 +14,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *)
 
+open FFmpeg
+
 open Usual
 open AudioFile
-open FFmpeg
-open Avutil
 
 module OutRsp = Swresample.Make (Swresample.FltBigArray) (Swresample.Frame)
 module Ev = EventBus
@@ -207,7 +207,7 @@ class c () = object (self)
   	  Ev.asyncNotify(Ev.StartFile file);
   	  match file.voice with
   	  | None -> Ev.asyncNotify(Ev.EndFile file); outOpt
-  	  | Some talker -> (
+  	  | Some _ -> (
 	      let os = defOutput outOpt in
 
               AudioFile.checkSeek file |> ignore;

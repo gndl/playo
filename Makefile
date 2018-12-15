@@ -1,41 +1,28 @@
-# OASIS_START
-# DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
+.PHONY: default build install uninstall test clean
 
-SETUP = ocaml setup.ml
+default: build
 
-build: setup.data
-	$(SETUP) -build $(BUILDFLAGS)
+build:
+	dune build src/playo.exe
 
-doc: setup.data build
-	$(SETUP) -doc $(DOCFLAGS)
+dbg:
+	dune build src/playo.bc
+	cp ./_build/default/src/playo.bc .
 
-test: setup.data build
-	$(SETUP) -test $(TESTFLAGS)
+test:
+	dune runtest -f
 
-all:
-	$(SETUP) -all $(ALLFLAGS)
+exec:
+	dune exec src/playo.exe
 
-install: setup.data
-	$(SETUP) -install $(INSTALLFLAGS)
+install:
+	dune install
 
-uninstall: setup.data
-	$(SETUP) -uninstall $(UNINSTALLFLAGS)
-
-reinstall: setup.data
-	$(SETUP) -reinstall $(REINSTALLFLAGS)
+uninstall:
+	dune uninstall
 
 clean:
-	$(SETUP) -clean $(CLEANFLAGS)
-
-distclean:
-	$(SETUP) -distclean $(DISTCLEANFLAGS)
-
-setup.data:
-	$(SETUP) -configure $(CONFIGUREFLAGS)
-
-configure:
-	$(SETUP) -configure $(CONFIGUREFLAGS)
-
-.PHONY: build doc test all install uninstall reinstall clean distclean configure
-
-# OASIS_STOP
+	dune clean
+# Optionally, remove all files/folders ignored by git as defined
+# in .gitignore (-X).
+#git clean -dfXq

@@ -23,7 +23,7 @@ module InRsp = Swresample.Make (Swresample.Frame) (Swresample.FltBigArray)
 
 
 let audio_ext = [ ".wav"; ".ogg"; ".flac"; ".mp3"; ".pls"](*; ".m3u"*)
-let audio_ext_pattern = L.map(fun ext -> "*"^ext) audio_ext
+let audio_ext_pattern = L.map ~f:(fun ext -> "*"^ext) audio_ext
 
 let outRate = 44100
 let outChannelLayout = `Stereo
@@ -86,7 +86,7 @@ let name file = file.fnode.name
 let path file = file.fnode.path
 let filename file = file.fnode.path^file.fnode.name
 let time file = file.fnode.time
-let size file = file.fnode.size
+(*let size file = file.fnode.size *)
 let kind file = file.fnode.kind
 let idx file = file.fnode.idx
 let parent file = file.fnode.parent
@@ -251,7 +251,7 @@ let addIfAudioFile filename l =
     let (path, name) = splitFilename filename in
     let p = S.rindex name '.' in
     let ext = S.sub name p (S.length name - p) in
-    if true || L.mem ext audio_ext then (
+    if true || L.mem ext ~set:audio_ext then (
       let fnode = makeNode name path in
       let f = {title = uk; artist = uk; album = uk; genre = uk; fnode;
                duration = Int64.zero;
@@ -267,7 +267,7 @@ let load filename excludedFiles =
 
   let rec check filename l =
     try
-      if L.mem filename excludedFiles then l
+      if L.mem filename ~set:excludedFiles then l
       else (
     	if Sys.is_directory filename then addDir filename l
     	else addIfAudioFile filename l
@@ -280,11 +280,11 @@ let load filename excludedFiles =
 	if fn.[0] = '.' then l else check (dirname^"/"^fn) l) ~init:[] sons) with
     | [] -> l
     | cl -> let children = A.of_list cl in
-      A.fast_sort(fun n1 n2 -> S.compare n1.name n2.name) children;
+      A.fast_sort ~cmp:(fun n1 n2 -> S.compare n1.name n2.name) children;
       let (path, name) = splitFilename dirname in
       let dnode = makeNode name path ~size:(soi(A.length children)) in
       let dir = {dnode; children} in dnode.kind <- Dir dir;
-      A.iteri(fun i nd -> nd.idx <- i; nd.parent <- Some dir) children;
+      A.iteri ~f:(fun i nd -> nd.idx <- i; nd.parent <- Some dir) children;
       dnode::l
   in
   let e = S.length filename - 1 in
@@ -309,21 +309,21 @@ let iterFiles fct lst =
   let rec itr nd =
     match nd.kind with
     | File f -> fct f
-    | Dir d -> A.iter itr d.children
+    | Dir d -> A.iter ~f:itr d.children
     | Null -> ()
   in
-  A.iter itr lst
+  A.iter ~f:itr lst
 
 
 let concatChildren children newChildren =
   let offset = A.length children in
-  A.iteri(fun i nd -> nd.idx <- i + offset) newChildren;
+  A.iteri ~f:(fun i nd -> nd.idx <- i + offset) newChildren;
   A.append children newChildren
 
 
 let addChildrenToDir children dir =
   let offset = A.length dir.children in
-  A.iteri(fun i nd -> nd.idx <- i + offset; nd.parent <- Some dir) children;
+  A.iteri ~f:(fun i nd -> nd.idx <- i + offset; nd.parent <- Some dir) children;
   dir.children <- A.append dir.children children;
   dir.dnode.size <- soi(offset + A.length children)
 
@@ -337,14 +337,14 @@ let supNode node parent =
     parent.dnode.size <- soi lg;
 
     if node.idx = 0 then (
-      parent.children <- A.sub parent.children 1 lg;
-      A.iter(fun n -> n.idx <- n.idx - 1) parent.children
+      parent.children <- A.sub parent.children ~pos:1 ~len:lg;
+      A.iter ~f:(fun n -> n.idx <- n.idx - 1) parent.children
     )
-    else if node.idx = lg then parent.children <- A.sub parent.children 0 lg
+    else if node.idx = lg then parent.children <- A.sub parent.children ~pos:0 ~len:lg
     else (
-      let part2 = A.sub parent.children (node.idx + 1) (lg - node.idx) in
-      A.iter(fun n -> n.idx <- n.idx - 1) part2;
-      parent.children <- A.append(A.sub parent.children 0 node.idx) part2
+      let part2 = A.sub parent.children ~pos:(node.idx + 1) ~len:(lg - node.idx) in
+      A.iter ~f:(fun n -> n.idx <- n.idx - 1) part2;
+      parent.children <- A.append(A.sub parent.children ~pos:0 ~len:node.idx) part2
     )
   )
 
@@ -354,13 +354,13 @@ let supNodeByIndex idx nodes =
 
   if lg < 0 || idx < 0 || idx > lg then nodes else
   if idx = 0 then (
-    let res = A.sub nodes 1 lg in
-    A.iter(fun n -> n.idx <- n.idx - 1) res; res) else
-  if idx = lg then A.sub nodes 0 lg
+    let res = A.sub nodes ~pos:1 ~len:lg in
+    A.iter ~f:(fun n -> n.idx <- n.idx - 1) res; res) else
+  if idx = lg then A.sub nodes ~pos:0 ~len:lg
   else (
-    let part2 = A.sub nodes (idx + 1) (lg - idx) in
-    A.iter(fun n -> n.idx <- n.idx - 1) part2;
-    A.append(A.sub nodes 0 idx) part2
+    let part2 = A.sub nodes ~pos:(idx + 1) ~len:(lg - idx) in
+    A.iter ~f:(fun n -> n.idx <- n.idx - 1) part2;
+    A.append(A.sub nodes ~pos:0 ~len:idx) part2
   )
 
 
@@ -372,7 +372,7 @@ let copy node =
 	    ~album:f.album ~genre:f.genre ~rate:f.rate ~channels:f.channels ~size:n.size in nf.fnode)
     | Dir d -> (
 	let nd = makeDir ~path:n.path n.name in
-	addChildrenToDir(A.map cp d.children) nd; nd.dnode)
+	addChildrenToDir(A.map ~f:cp d.children) nd; nd.dnode)
     | Null -> (makeNode n.name n.path ~time:n.time ~size:n.size)
   in
   cp node

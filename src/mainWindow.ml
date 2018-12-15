@@ -15,9 +15,7 @@
  *)
 
 open Usual
-(*open GuiUtility*)
 open AudioFile
-open FilesModel
 
 module Ev = EventBus
 
