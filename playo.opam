@@ -1,0 +1,25 @@
+opam-version: "1.2"
+maintainer: "gndl@users.noreply.github.com"
+authors: ["gndl"]
+homepage: "https://github.com/gndl/playo"
+bug-reports: "https://github.com/gndl/playo/issues"
+dev-repo: "https://github.com/gndl/playo.git"
+
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" playo "-j" 4]
+]
+
+build-test: ["dune" "runtest" "-p" playo]
+
+depends: [
+  "dune" {build}
+  "alcotest" {test}
+  "lablgtk"
+  "config-file"
+  "ffmpeg"
+]
+
+available: [
+  ocaml-version >= "4.05.0"
+]
