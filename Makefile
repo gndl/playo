@@ -3,7 +3,7 @@
 default: build
 
 dep:
-	opam install -y lablgtk config-file ffmpeg
+	opam install -y --deps-only .
 
 build:
 	dune build src/playo.exe
@@ -15,7 +15,7 @@ dbg:
 test:
 	dune runtest -f
 
-exec:
+run:
 	dune exec src/playo.exe
 
 install:

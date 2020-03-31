@@ -25,7 +25,7 @@ Compilation
 Execution
 ---------
 
-    $ make exec
+    $ make run
 
 
 Installation

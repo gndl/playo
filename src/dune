@@ -1,8 +1,10 @@
-(rule
- (targets playoGui.ml)
- (deps    gen_gui playoGui.glade)
- (action  (run %{first-dep} -o %{targets})))
+; (rule
+;  (targets playoGui.ml)
+;  (deps    gen_gui playoGui.glade)
+;  (action  (run %{first-dep} -o %{targets})))
 
 (executable
  (name playo)
- (libraries unix threads str bigarray lablgtk2 lablgtk2.glade ffmpeg config-file))
+ (libraries unix threads str bigarray lablgtk2 lablgtk2.glade ffmpeg sexplib ppx_sexp_conv ppxlib)
+ (preprocess (pps ppxlib ppx_sexp_conv))
+)

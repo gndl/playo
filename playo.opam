@@ -1,4 +1,5 @@
 opam-version: "1.2"
+synopsis: "Simple audio player in OCaml"
 maintainer: "gndl@users.noreply.github.com"
 authors: ["gndl"]
 homepage: "https://github.com/gndl/playo"
@@ -7,7 +8,7 @@ dev-repo: "https://github.com/gndl/playo.git"
 
 build: [
   ["dune" "subst"] {pinned}
-  ["dune" "build" "-p" playo "-j" 4]
+  ["dune" "build" "-p" playo]
 ]
 
 build-test: ["dune" "runtest" "-p" playo]
@@ -16,8 +17,10 @@ depends: [
   "dune" {build}
   "alcotest" {test}
   "lablgtk"
-  "config-file"
-  "ffmpeg"
+  "ffmpeg" {<= "0.2.0"}
+  "ppx_sexp_conv" {build}
+  "ppxlib" {build}
+  "sexplib"
 ]
 
 available: [
