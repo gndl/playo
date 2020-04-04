@@ -19,8 +19,6 @@ open AudioFile
 
 module Ev = EventBus
 
-(*let trace msg = ()*)
-
 type row = AudioFile.node
 
 let unexistentRow = AudioFile.unexistentNode
@@ -75,7 +73,6 @@ class c = object (self)
 	  None
 	else (
 	  let rw = searchVisibleRow 0 visibleRowIndex rws
-          (*					let rw = rws.(visibleRowIndex)*)
 	  in
 	  if ii = A.length indices - 1 then
 	    Some rw
@@ -126,7 +123,6 @@ class c = object (self)
 
   method custom_iter_children (rowopt:row option) : row option =
     match rowopt with
-    (*| None | Some {kind = Dir { children = [||] }} | Some {kind = File} -> None*)
     | Some {kind = Dir { children = nodes; _ }; _} -> Some nodes.(0)
     | _ -> None
 
@@ -140,7 +136,6 @@ class c = object (self)
   method custom_iter_n_children (rowopt:row option) : int =
     match rowopt with
     | None -> A.length mRootDirs
-    (*    | Some {kind = File f} | Some {kind = Null} -> 0*)
     | Some {kind = Dir { children = nodes; _}; _} -> A.length nodes
     | _ -> 0
 
@@ -204,35 +199,10 @@ class c = object (self)
     | Ev.FileChanged file -> self#updateNode file.fnode
     | Ev.NodeChanged nd -> self#updateNode nd
     | Ev.AddFile nd ->
-      self#custom_row_inserted (self#custom_get_path nd) nd; self#updateNode nd
+      self#custom_row_inserted (self#custom_get_path nd) nd
     | Ev.SupFile nd ->
       self#custom_row_deleted (self#custom_get_path nd)
-    (*		| Ev.AddPlaylist dir ->
-      self#custom_row_inserted (self#custom_get_path dir.dnode) dir.dnode
-      | Ev.SupPlaylist dir ->
-      self#custom_row_inserted (self#custom_get_path dir.dnode) dir.dnode
-    *)		| _ -> ()
-
-  (*		
-method appendNodesa nodes =
-let rec mkrw nd i parent =
-match nd.kind with
-| AudioFile.File f -> {nd = nd; knd = Fl; idx = i;
-parent = parent; playlisted = false}
-| AudioFile.Dir d ->
-let dir = {children = [||]} in
-let rw = {nd = nd; knd = Dir dir; idx = i;
-parent = parent; playlisted = false}
-in
-let nodes = A.of_list d.nodes in
-dir.children <- A.mapi(fun i nd -> mkrw nd i (Some rw)) nodes;
-rw
-in
-let offset = A.length mRootDirs in
-let nds = A.of_list nodes in
-let rws = A.mapi(fun i nd -> mkrw nd (i + offset) None) nds in
-mRootDirs <- A.append mRootDirs rws;
-*)
+    | _ -> ()
 
 end
 
