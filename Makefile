@@ -18,6 +18,9 @@ test:
 run:
 	dune exec src/playo.exe
 
+gdb: build
+	gdb _build/default/src/playo.exe
+
 install:
 	dune install
 

@@ -166,7 +166,7 @@ let checkPropertys file =
     try
       let container = Av.open_input filename in
       let _, stream, codec = Av.find_best_audio_stream container in
-      
+
       file.channels <- Avcodec.Audio.get_nb_channels codec;
       file.rate <- Int64.of_int(Avcodec.Audio.get_sample_rate codec);
       file.container <- Some container;
@@ -231,9 +231,9 @@ let addToPosition file samples =
     file.newPosition <- Int64.(add file.curPosition (of_int samples));
     file.curPosition <- file.newPosition;
   );
-
-  file.readPercent <- Int64.(to_int(div(mul file.newPosition hundred) file.duration))
-
+  if file.duration > Int64.zero then (
+    file.readPercent <- Int64.(to_int(div(mul file.newPosition hundred) file.duration))
+  )
 
 let setPositionPer10k file pos = Int64.(
     file.newPosition <- div(mul file.duration (of_int pos)) (of_int 10000);

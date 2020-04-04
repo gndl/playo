@@ -75,19 +75,11 @@ class c ?(filenameList = []) () = object (self)
 
   (* observer methods *)
   method observe =	function
-    (*		| Ev.State s when s = State.Stop -> AudioFile.close mNodes*)
     | Ev.StartFile f -> f.fnode.state <- mPlayMode;
       L.iter ~f:(fun nd -> nd.state <- mPlayMode) mSelectedNodes;
-(*
-match f.fnode.state with
-| Off -> f.fnode.state <- if mPlayMode = Repeat then Single else mPlayMode
-| _ -> ()*)
     | Ev.PauseFile f -> f.fnode.state <- Pause;
       L.iter ~f:(fun nd -> nd.state <- Pause) mSelectedNodes;
-    | Ev.EndFile f -> f.fnode.state <- Off(*
-match f.fnode.state with
-| Repeat -> ()
-| _ -> f.fnode.state <- Off*)
+    | Ev.EndFile f -> f.fnode.state <- Off
     | Ev.EndList f -> (
 	match mPlayMode with
 	| Repeat -> ()
@@ -101,10 +93,6 @@ match f.fnode.state with
     | Ev.OutputDeviceChanged od -> Configuration.setOutputDevice od
     | _ -> ()
 
-(*
-method getState = Browser.state mPlayer
-method setState s = Browser.state mPlayer <- s; L.iter(fun o -> o#seeState s) mObservers
-*)
   (*	method player = mPlayer*)
   method nodes = mNodes
 
@@ -129,9 +117,6 @@ method setState s = Browser.state mPlayer <- s; L.iter(fun o -> o#seeState s) mO
 
 
   method checkVoice file =
-(*
-self#checkPropertys file
-*)
     if self#checkPropertys file then (
       try
 	let _ = AudioFile.stream file in true
@@ -140,8 +125,6 @@ self#checkPropertys file
 	  false
 	)
     ) else false
-(*
-*)
 
   method addFiles ?(save = true) filenameList =
     let ll = L.map ~f:(fun fn -> trace("add "^fn);
@@ -150,7 +133,7 @@ self#checkPropertys file
     let children = A.of_list(L.flatten ll) in
     AudioFile.addChildrenToDir children mFolders;
     A.iter ~f:(fun nd -> Ev.notify(Ev.AddFile nd)) children;
-    (*mNodes <- AudioFile.concatChildren mNodes (A.of_list(L.flatten ll));*)
+
     if save then Configuration.addFiles filenameList;
 
 
@@ -214,8 +197,9 @@ self#checkPropertys file
     else (
       let nbPlaylist = A.length mPlaylists.children
       in
-      if node == mPlaylists.dnode || nbPlaylist = 0 then
+      if node == mPlaylists.dnode || nbPlaylist = 0 then (
 	Ev.notify(Ev.NewPlaylist("Playlist "^soi(nbPlaylist + 1)));
+      );
 
       let rec mkFileLst fl nd =
 	match nd.kind with

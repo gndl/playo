@@ -156,22 +156,6 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 	  | [] -> Configuration.setColumns columns; columns
 	  | l -> l);
 
-(*
-  filesTreeview#selection#connect#after#changed ~callback:
-    (fun () -> traceBlue "selection changed";
-(*      L.iter filesTreeview#selection#get_selected_rows ~f:
-        (fun p -> match filesModel#custom_get_iter p with
-| Some row -> trace("file "^row.nd.name^" selected");(* ctrl#changeFile row.nd*)
-| None -> trace "Path not found !");
-*)		);
-
-filesTreeview#connect#after#row_activated ~callback:
-    (fun path vcol -> traceBlue "Row activated";
-(*       match filesModel#custom_get_iter path with
-| Some row -> trace("file "^row.nd.name^" selected"); ctrl#changeFile row.nd
-| None -> trace "Path not found !"
-*)    );
-*)
       filteredFilesModel#set_visible_func(fun model treeIter ->
 
 	  if S.length mFilterMotif = 0 then true
@@ -222,11 +206,10 @@ filesTreeview#connect#after#row_activated ~callback:
       mButtonPressed <- true;
       let x = iof (GdkEvent.Button.x ev) in
       let y = iof (GdkEvent.Button.y ev) in
-      trace("buttonPressed x = "^soi x^", y = "^soi y);
+
       match filesTreeview#get_path_at_pos ~x ~y with
       | None -> false
-      | Some (path, col, colX, colY) -> (
-          trace("buttonPressed colX = "^soi colX^", colY = "^soi colY);
+      | Some (path, col, colX, _) -> (
 	  let colId = col#get_sort_column_id in
 
 	  if mTimeCol#get_sort_column_id = colId then (
@@ -330,11 +313,11 @@ filesTreeview#connect#after#row_activated ~callback:
       | Some node -> (
 	  match node.state with
 	  | Off -> sttRndrr#set_properties [`VISIBLE false]
-	  | Track -> sttRndrr#set_properties [`STOCK_ID "gtk-media-play"(*media-playback-start*); `VISIBLE true]
-	  | Repeat -> sttRndrr#set_properties [`STOCK_ID "gtk-refresh"(*media-playlist-repeat*); `VISIBLE true]
-	  | Single -> sttRndrr#set_properties [`STOCK_ID "gtk-media-next"(*media-seek-forward*); `VISIBLE true]
-	  | Random -> sttRndrr#set_properties [`STOCK_ID "gtk-dialog-question"(*media-seek-forward*); `VISIBLE true]
-	  | Pause -> sttRndrr#set_properties [`STOCK_ID "gtk-media-pause"(*media-playback-pause*); `VISIBLE true]
+	  | Track -> sttRndrr#set_properties [`STOCK_ID "gtk-media-play"; `VISIBLE true]
+	  | Repeat -> sttRndrr#set_properties [`STOCK_ID "gtk-refresh"; `VISIBLE true]
+	  | Single -> sttRndrr#set_properties [`STOCK_ID "gtk-media-next"; `VISIBLE true]
+	  | Random -> sttRndrr#set_properties [`STOCK_ID "gtk-dialog-question"; `VISIBLE true]
+	  | Pause -> sttRndrr#set_properties [`STOCK_ID "gtk-media-pause"; `VISIBLE true]
 	)
       | _ -> sttRndrr#set_properties [`VISIBLE false]
 
@@ -353,26 +336,6 @@ filesTreeview#connect#after#row_activated ~callback:
 	      `VISIBLE true;
 	      `VALUE 0;
 	      `TEXT(Some "ERROR")];)
-(*
-if f.readPercent > 0 then (
-match mTimeCol#widget with
-| Some w -> 
-let drawable = Gdk.Drawable.cast w#as_widget in
-(*let drawable = new GDraw.drawable drawable in*)
-let gc = Gdk.GC.create drawable in
-(*Gdk.GC.set_background gc color
-let drawable = new GDraw.drawable filesTreeview#as_tree_view in
-drawable#set_background (`RGB(200, 180, 160));*)
-trace"drawable";
-let r = filesTreeview#get_cell_area ~path (*~col:mTimeCol*) () in
-let x = Gdk.Rectangle.x r and y = Gdk.Rectangle.y r in
-let w = ((Gdk.Rectangle.width r) * f.readPercent) / 100 in
-let h = Gdk.Rectangle.height r in
-(*				drawable#rectangle x y w h ();*)
-Gdk.Draw.rectangle drawable gc x y w h ();
-traceBlue("render "^soi f.readPercent^" % at x:"^soi x^" y:"^soi y)
-| None -> traceRed"NO mTimeCol#widget";
-*)
       | _ -> prgRndrr#set_properties [`VISIBLE false]
 
 
@@ -384,11 +347,6 @@ traceBlue("render "^soi f.readPercent^" % at x:"^soi x^" y:"^soi y)
 	filesTreeview#selection#select_path path;
       | Ev.EndFile f ->
 	filesTreeview#selection#unselect_path(filesModel#custom_get_path f.fnode)
-      (*		| Ev.FileList fl -> (
-	filesTreeview#set_model None;
-	filesModel#setNodes fl;
-	filesTreeview#set_model(Some (filesModel :> GTree.model)););
-      *)
       | Ev.Filter motif -> self#setFilterMotif motif
       | _ -> ()
 
