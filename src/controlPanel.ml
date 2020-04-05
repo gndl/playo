@@ -42,8 +42,6 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
       in
       pathCol#set_resizable true;
       ignore(gui#hiddenFilesTreeview#append_column pathCol);
-      (*		ignore(gui#hiddenFilesTreeview#append_column mAddCol);
-      *)
       selection#set_mode`SINGLE;
       ignore(selection#connect#changed ~callback:self#onHiddenFilesSelectionChanged);
 
@@ -58,8 +56,6 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
       selection#set_mode`SINGLE;
       ignore(selection#connect#changed ~callback:self#onDeviceSelectionChanged);
 
-      (*		self#update()
-      *)
 
       (* observer methods *)
     method observe =	function

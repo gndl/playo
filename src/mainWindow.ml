@@ -19,8 +19,6 @@ open AudioFile
 
 module Ev = EventBus
 
-(*use "gui.ml";;*)
-
 class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
   object (self)
 
@@ -34,34 +32,20 @@ class c (gui:PlayoGui.mainWindow) (ctrl:Controler.c) =
       gui#bind ~name:"on_volumeScale_value_changed" ~callback:self#changeVolume;
       gui#bind ~name:"on_openFileButton_clicked" ~callback:self#openFile;
       gui#bind ~name:"on_preferencesToggletoolbutton_toggled" ~callback:self#configuration;
-(*
-gui#bind ~name:"on_newPlaylistToolbarButton_clicked" ~callback:ctrl#newPlaylist;
-gui#bind ~name:"on_savePlaylistToolbarButton_clicked" ~callback:ctrl#savePlaylist;
-gui#bind ~name:"on_savePlaylistAsToolbarButton_clicked" ~callback:self#savePlaylistAs;
 
-gui#bind ~name:"on_pauseButton_clicked" ~callback:self#pause;
-gui#bind ~name:"on_stopButton_clicked" ~callback:self#stop;
-gui#bind ~name:"on_beginButton_clicked" ~callback:self#toBegin;
-gui#bind ~name:"on_playToButton_clicked" ~callback:self#playTo;
-gui#bind ~name:"on_tickSpinButton_input" ~callback:self#tickEntered;
-*)
       ignore(gui#mainWindow#connect#destroy ~callback:self#quit);
 
       gui#volumeScale#adjustment#set_value ctrl#getVolume
 
 
-    method init() = ()
-
     (* observer methods *)
     method observe =	function
-      (*		| Ev.State s -> ()*)
       | Ev.FileChanged file ->
 	gui#trackProgressbar#set_fraction(foi(AudioFile.readPercent file) /. 100.);
 	gui#trackProgressbar#set_text(AudioFile.progress file)
       | Ev.StartFile f -> (
 	  if AudioFile.hasId f then
 	    gui#mainWindow#set_title(f.artist^" : "^f.title^" ("^f.album^") - "^appName)
-            (*			else gui#mainWindow#set_title(f.fnode.path^f.fnode.name^" - "^appName);*)
 	  else gui#mainWindow#set_title(f.fnode.name^" - "^appName);
 	)
       | Ev.NewPlaylist defName -> (
@@ -78,12 +62,7 @@ gui#bind ~name:"on_tickSpinButton_input" ~callback:self#tickEntered;
       match GuiUtility.(selectFile gui#toplevel audioFilter) with
       | Some fl -> ctrl#addFiles fl
       | None -> ()
-(*
-method openPlaylist () =
-match selectFile toplevel sessionFilter with
-| Some fl -> gui#mainWindow#set_title(f^" : "^appName); ctrl#openPlaylist f
-| None -> ()
-*)
+
     method savePlaylistAs () =
       match GuiUtility.(saveFile gui#toplevel sessionFilter) with
       | Some f -> gui#mainWindow#set_title(f^" : "^appName); ctrl#savePlaylistAs f

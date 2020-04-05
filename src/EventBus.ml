@@ -15,21 +15,18 @@
  *)
 
 type notification =
-	State of State.t |
-	FileChanged of AudioFile.t |
-	NodeChanged of AudioFile.node |
-	StartFile of AudioFile.t |
-	PauseFile of AudioFile.t |
-	EndFile of AudioFile.t |
-	EndList of AudioFile.t |
-	AddFile of AudioFile.node |
-	SupFile of AudioFile.node |
-	NewPlaylist of string |
-	AddFolder |
-	HiddenFilesChanged |
-	Filter of string |
-	OutputDeviceChanged of string |
-	Error of string
+    State of State.t |
+    FileChanged of AudioFile.t |
+    StartFile of AudioFile.t |
+    PauseFile of AudioFile.t |
+    EndFile of AudioFile.t |
+    EndList of AudioFile.t |
+    NewPlaylist of string |
+    AddFolder |
+    HiddenFilesChanged |
+    Filter of string |
+    OutputDeviceChanged of string |
+    Error of string
 
 
 let observers : (notification -> unit) list ref = ref []
@@ -37,7 +34,7 @@ let observers : (notification -> unit) list ref = ref []
 let addObserver o = observers := o :: !observers
 
 let notify notification =
-	List.iter(fun observe -> observe notification) !observers
+  List.iter(fun observe -> observe notification) !observers
 
 let asyncNotify notif = GtkThread.async notify notif
 

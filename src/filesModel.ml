@@ -23,7 +23,7 @@ type row = AudioFile.node
 
 let unexistentRow = AudioFile.unexistentNode
 
-(** The columns in our custom model *)
+(* The columns in our custom model *)
 let columnList = new GTree.column_list
 let nameColumn = columnList#add Gobject.Data.string
 let titleColumn = columnList#add Gobject.Data.string
@@ -157,11 +157,16 @@ class c = object (self)
   initializer
     Ev.addObserver self#observe;
 
+  method fileInserted node =
+    self#custom_row_inserted (self#custom_get_path node) node
+
+  method fileDeleted node =
+    self#custom_row_deleted (self#custom_get_path node)
+      
+  method setNodes nodes = mRootDirs <- nodes
+
   method updateNode node =
     self#custom_row_changed (self#custom_get_path node) node
-
-
-  method setNodes nodes = mRootDirs <- nodes
 
   method filter regexp =
 
@@ -197,11 +202,6 @@ class c = object (self)
   (* observer methods *)
   method observe =	 function
     | Ev.FileChanged file -> self#updateNode file.fnode
-    | Ev.NodeChanged nd -> self#updateNode nd
-    | Ev.AddFile nd ->
-      self#custom_row_inserted (self#custom_get_path nd) nd
-    | Ev.SupFile nd ->
-      self#custom_row_deleted (self#custom_get_path nd)
     | _ -> ()
 
 end

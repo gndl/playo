@@ -24,23 +24,17 @@ let () =
 
     Player.initialize();
 
-    let ctrl = Controler.make ~filenameList:fl () in
+    let filesModel = new FilesModel.c in
+
+    let ctrl = Controler.make filesModel ~filenameList:fl () in
 
     ignore(GtkMain.Main.init());
 
     let gui = new PlayoGui.mainWindow() in
 
-    let mainWindow = new MainWindow.c gui ctrl in
-    mainWindow#init();
-    let filesModel = new FilesModel.c in
+    let _ = new MainWindow.c gui ctrl in
 
-    ctrl#init();
-    filesModel#setNodes ctrl#nodes;
-
-    let filesView = new FilesView.c filesModel 
-      gui#audioFileTreeview ctrl gui#toplevel in
-
-    filesView#init();
+    let _ = new FilesView.c filesModel gui#audioFileTreeview ctrl gui#toplevel in
 
     GtkThread.main ();
 

@@ -38,8 +38,6 @@ type t = {
 } [@@deriving sexp]
 
 
-(* let log_file = open_out "playo.log" *)
-
 let default = {
   volume = 50.;
   fileListColumns = ["Add"; "Name"; "Time"; "Sup"; "Title"; "Artist"; "Album"; "Genre"; "Size"; "Path"];

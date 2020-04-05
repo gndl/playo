@@ -168,8 +168,6 @@ class c (filesModel:FilesModel.c) (filesTreeview:GTree.view) (ctrl:Controler.c) 
 	)
 
 
-    method init() = ()
-
     method removeRow () = trace "remove row";
 
     method popupMenu ev =

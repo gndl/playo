@@ -86,7 +86,6 @@ let name file = file.fnode.name
 let path file = file.fnode.path
 let filename file = file.fnode.path^file.fnode.name
 let time file = file.fnode.time
-(*let size file = file.fnode.size *)
 let kind file = file.fnode.kind
 let idx file = file.fnode.idx
 let parent file = file.fnode.parent
